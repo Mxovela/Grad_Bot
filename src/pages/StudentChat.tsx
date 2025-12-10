@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -10,9 +10,12 @@ import {
   Sparkles
 } from 'lucide-react';
 
+// Add loading type
+type MessageType = 'user' | 'bot' | 'loading';
+
 interface Message {
   id: number;
-  type: 'user' | 'bot';
+  type: MessageType;
   content: string;
   sources?: string[];
   timestamp: string;
@@ -27,7 +30,17 @@ export function StudentChat() {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
+
   const [inputValue, setInputValue] = useState('');
+
+  const chatRef = useRef<HTMLDivElement>(null);
+
+  // AUTO-SCROLL WHEN MESSAGES CHANGE
+  useEffect(() => {
+    if (chatRef.current) {
+      chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const suggestedQuestions = [
     "What are my first 90 days milestones?",
@@ -36,27 +49,66 @@ export function StudentChat() {
     "Who is my HR contact?"
   ];
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
 
     const userMessage: Message = {
-      id: messages.length + 1,
+      id: Date.now(),
       type: 'user',
       content: inputValue,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
-    // Simulate bot response
-    const botMessage: Message = {
-      id: messages.length + 2,
-      type: 'bot',
-      content: "Your first 90 days include orientation (Week 1), technical training (Weeks 2-4), project shadowing (Weeks 5-8), and first independent project (Weeks 9-12). You'll have weekly check-ins with your mentor throughout.",
-      sources: ['Graduate Handbook 2025, Section 2.3', 'Onboarding Schedule'],
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    setMessages(prev => [...prev, userMessage]);
+
+    const questionToSend = inputValue;
+    setInputValue('');
+
+    // Add loading indicator
+    const loadingMessage: Message = {
+      id: Date.now() + 1,
+      type: 'loading',
+      content: "",
+      timestamp: ""
     };
 
-    setMessages([...messages, userMessage, botMessage]);
-    setInputValue('');
+    setMessages(prev => [...prev, loadingMessage]);
+
+    try {
+      const response = await fetch("http://localhost:8000/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: questionToSend })
+      });
+
+      const data = await response.json();
+
+      const botMessage: Message = {
+        id: Date.now() + 2,
+        type: 'bot',
+        content: data.answer,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      // Replace the loading bubble
+      setMessages(prev => [
+        ...prev.filter(m => m.type !== 'loading'),
+        botMessage
+      ]);
+
+    } catch (error) {
+      const errorMessage: Message = {
+        id: Date.now() + 2,
+        type: 'bot',
+        content: "Sorry, I couldn't reach the server.",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+
+      setMessages(prev => [
+        ...prev.filter(m => m.type !== 'loading'),
+        errorMessage
+      ]);
+    }
   };
 
   const handleSuggestedQuestion = (question: string) => {
@@ -66,6 +118,7 @@ export function StudentChat() {
   return (
     <div className="pt-8 h-[calc(100vh-8rem)]">
       <div className="flex flex-col h-full max-w-4xl mx-auto">
+
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-gray-900 mb-2">Chat Assistant</h1>
@@ -74,11 +127,17 @@ export function StudentChat() {
 
         {/* Chat container */}
         <Card className="flex-1 border-gray-200 flex flex-col overflow-hidden">
+
           {/* Messages area */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+          <div
+            ref={chatRef}
+            className="flex-1 overflow-y-auto p-6 space-y-6"
+          >
             {messages.map((message) => (
               <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] ${message.type === 'user' ? 'order-2' : 'order-1'}`}>
+
+                  {/* BOT HEADER */}
                   {message.type === 'bot' && (
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-teal-500 flex items-center justify-center">
@@ -87,15 +146,29 @@ export function StudentChat() {
                       <span className="text-xs text-gray-500">Knowledge Assistant</span>
                     </div>
                   )}
-                  
+
+                  {/* Message Bubble */}
                   <div className={`rounded-2xl p-4 ${
-                    message.type === 'user' 
-                      ? 'bg-gradient-to-r from-blue-500 to-teal-500 text-white rounded-tr-sm' 
+                    message.type === 'user'
+                      ? 'bg-gradient-to-r from-blue-500 to-teal-500 text-white rounded-tr-sm'
+                      : message.type === 'loading'
+                      ? 'bg-gray-200 text-gray-900 rounded-tl-sm'
                       : 'bg-gray-100 text-gray-900 rounded-tl-sm'
                   }`}>
-                    <p className="text-sm">{message.content}</p>
+
+                    {/* LOADING ANIMATION */}
+                    {message.type === 'loading' ? (
+                      <div className="typing">
+                        <span className="dot"></span>
+                        <span className="dot"></span>
+                        <span className="dot"></span>
+                      </div>
+                    ) : (
+                      <p className="text-sm">{message.content}</p>
+                    )}
                   </div>
 
+                  {/* Sources */}
                   {message.sources && (
                     <div className="mt-2 space-y-1">
                       {message.sources.map((source, index) => (
@@ -107,6 +180,7 @@ export function StudentChat() {
                     </div>
                   )}
 
+                  {/* BOT FOOTER */}
                   {message.type === 'bot' && (
                     <div className="flex items-center gap-3 mt-2">
                       <span className="text-xs text-gray-500">{message.timestamp}</span>
@@ -121,17 +195,19 @@ export function StudentChat() {
                     </div>
                   )}
 
+                  {/* USER FOOTER */}
                   {message.type === 'user' && (
                     <div className="flex justify-end mt-2">
                       <span className="text-xs text-gray-500">{message.timestamp}</span>
                     </div>
                   )}
+
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Suggested questions (only show when no messages) */}
+          {/* Suggested questions */}
           {messages.length === 1 && (
             <div className="px-6 pb-4">
               <p className="text-sm text-gray-500 mb-3">Suggested questions:</p>
@@ -169,6 +245,7 @@ export function StudentChat() {
               </Button>
             </div>
           </div>
+
         </Card>
       </div>
     </div>
