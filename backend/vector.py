@@ -8,6 +8,13 @@ import hashlib
 
 load_dotenv()
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+DOCS_PATH = os.path.join(BASE_DIR, "documents")
+DB_PATH = os.path.join(BASE_DIR, "chroma_langchain_db")
+
+
+
 # ==============================
 # DOCUMENT LOADING
 # ==============================
@@ -179,6 +186,8 @@ embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 DB_PATH = "./chrome_langchain_db"
 add_documents = not os.path.exists(DB_PATH)
 
+
+
 vector_store = Chroma(
     collection_name="grad_knowledge",
     persist_directory=DB_PATH,
@@ -188,10 +197,11 @@ vector_store = Chroma(
 if add_documents:
     raw_documents = load_documents_from_folder("documents")
     documents = chunk_documents(raw_documents)
+    print(f"Loaded {len(raw_documents)} raw documents")
     ids = [doc.id for doc in documents]
 
     vector_store.add_documents(documents=documents, ids=ids)
-    vector_store.persist()
+
 
 retriever = vector_store.as_retriever(
     search_kwargs={"k": 5}
