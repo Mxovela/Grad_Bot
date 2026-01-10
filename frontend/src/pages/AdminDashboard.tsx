@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { 
@@ -14,7 +15,10 @@ import {
 import { Progress } from '../components/ui/progress';
 
 export function AdminDashboard() {
+  const navigate = useNavigate();
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [recentDocuments, setRecentDocuments] = useState<Array<{ name: string; status: string; uploadedAt: string; chunks: number }>>([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(true);
 
   const stats = [
     {
@@ -47,12 +51,33 @@ export function AdminDashboard() {
     },
   ];
 
-  const recentDocuments = [
-    { name: 'Graduate Handbook 2025.pdf', status: 'processed', uploadedAt: '2 hours ago', chunks: 145 },
-    { name: 'Training Schedule Q1.pdf', status: 'processing', uploadedAt: '3 hours ago', chunks: 67 },
-    { name: 'Benefits Guide.pdf', status: 'processed', uploadedAt: '1 day ago', chunks: 89 },
-    { name: 'Code of Conduct.pdf', status: 'processed', uploadedAt: '2 days ago', chunks: 34 },
-  ];
+  useEffect(() => {
+    const fetchRecentDocuments = async () => {
+      setLoadingDocuments(true);
+      try {
+        const res = await fetch('http://127.0.0.1:8000/documents/get-newest-documents');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        if (Array.isArray(data)) {
+          const mapped = (data as any[]).map((it) => ({
+            name: it?.name ?? it?.file_name ?? it?.title ?? 'Untitled',
+            status: it?.status ?? 'processed',
+            uploadedAt: it?.uploaded_at ?? it?.uploadedAt ?? it?.created_at ?? it?.createdAt ?? '',
+            chunks: typeof it?.chunks === 'number' ? it.chunks : Number(it?.chunks) || 0,
+          }));
+          setRecentDocuments(mapped);
+        }
+      } catch (err: any) {
+        console.error('Failed to fetch recent documents:', err);
+        setRecentDocuments([]);
+      } finally {
+        setLoadingDocuments(false);
+      }
+    };
+
+    fetchRecentDocuments();
+  }, []);
 
   const recentQueries = [
     { question: 'What are the key milestones in my first 90 days?', answer: 'Provided', time: '5 min ago' },
@@ -103,28 +128,38 @@ export function AdminDashboard() {
         <Card className="p-6 border-gray-200">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-gray-900">Recent Documents</h3>
-            <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-blue-600 hover:text-blue-700"
+              onClick={() => navigate('/admin/documents')}
+            >
               View all
             </Button>
           </div>
           <div className="space-y-4">
-            {recentDocuments.map((doc, index) => (
-              <div key={index} className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
-                <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-5 h-5 text-gray-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-gray-900 text-sm truncate">{doc.name}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    {doc.status === 'processed' ? (
-                      <span className="inline-flex items-center gap-1 text-xs text-green-600">
-                        <CheckCircle2 className="w-3 h-3" />
-                        Processed
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-xs text-orange-600">
-                        <Clock className="w-3 h-3" />
-                        Processing
+            {loadingDocuments ? (
+              <div className="text-center py-8 text-gray-600">Loading recent documents...</div>
+            ) : recentDocuments.length === 0 ? (
+              <div className="text-center py-8 text-gray-600">No recent documents found</div>
+            ) : (
+              recentDocuments.map((doc, index) => (
+                <div key={index} className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
+                  <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-5 h-5 text-gray-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-gray-900 text-sm truncate">{doc.name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      {doc.status === 'processed' ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-green-600">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Processed
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-xs text-orange-600">
+                          <Clock className="w-3 h-3" />
+                          Processing
                       </span>
                     )}
                     <span className="text-xs text-gray-500">• {doc.chunks} chunks</span>
@@ -132,7 +167,8 @@ export function AdminDashboard() {
                 </div>
                 <span className="text-xs text-gray-500">{doc.uploadedAt}</span>
               </div>
-            ))}
+              ))
+            )}
           </div>
         </Card>
 

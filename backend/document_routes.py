@@ -77,3 +77,13 @@ def remove_document(document_id: str):
         raise HTTPException(status_code=404, detail="Document not found")
 
     return {"message": "Document deleted successfully"}
+
+@router.get("/get-newest-documents", response_model=list[DocumentResponse])
+def list_documents():
+    result = supabase.table("documents") \
+        .select("*") \
+        .order("created_at", desc=True) \
+        .limit(5) \
+        .execute()
+
+    return result.data

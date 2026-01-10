@@ -13,12 +13,7 @@ uvicorn api:app --reload
 
 pip install -r .\requirements.txt
 
-# getting your models
-
-Download Ollama
-
-ollama pull mistral # model
-ollama pull mxbai-embed-large # embedding model
+pip install python-jose    
 
 # pip install
 
