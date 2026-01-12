@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { 
+import {
   Send,
   FileText,
   ThumbsUp,
@@ -36,10 +36,12 @@ export function StudentChat() {
     {
       id: 1,
       type: 'bot',
-      content: "Hello Jane! I'm your Graduate Programme Knowledge Assistant. How can I help you today?",
+      content: "Hello! I'm your Graduate Programme Knowledge Assistant. How can I help you today?",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   ]);
+
+  const [firstName, setFirstName] = useState<string | null>(null);
 
   const [inputValue, setInputValue] = useState('');
 
@@ -51,6 +53,42 @@ export function StudentChat() {
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Fetch current user and personalize greeting
+  useEffect(() => {
+    let mounted = true;
+
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    (async () => {
+      try {
+        const res = await fetch('http://127.0.0.1:8000/auth/me', {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!res.ok) return;
+        const data = await res.json();
+        const name = data.first_name || data.firstName || data.name || data.full_name || data.fullName || '';
+        const first = name ? String(name).split(' ')[0] : null;
+        if (mounted && first) {
+          setFirstName(first);
+          setMessages(prev => prev.map(m => m.id === 1 ? {
+            ...m,
+            content: `Hello ${first}! I'm your Graduate Programme Knowledge Assistant. How can I help you today?`
+          } : m));
+        }
+      } catch (err) {
+        // ignore errors, keep default greeting
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   const suggestedQuestions = [
     "What are my first 90 days milestones?",
@@ -88,23 +126,23 @@ export function StudentChat() {
       const response = await fetch("http://localhost:8000/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          question: questionToSend 
+        body: JSON.stringify({
+          question: questionToSend
         })
       });
 
-    const data = await response.json();
-console.log("RAG response:", data);
+      const data = await response.json();
+      console.log("RAG response:", data);
 
-   
 
-  const botMessage: Message = {
-  id: Date.now() + 2,
-  type: 'bot',
-  content: data.answer,
-  sources: data.sources, // ✅ CORRECT
-  timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-};
+
+      const botMessage: Message = {
+        id: Date.now() + 2,
+        type: 'bot',
+        content: data.answer,
+        sources: data.sources, // ✅ CORRECT
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
 
 
       // Replace the loading bubble
@@ -165,13 +203,12 @@ console.log("RAG response:", data);
                   )}
 
                   {/* Message Bubble */}
-                  <div className={`rounded-2xl p-4 ${
-                    message.type === 'user'
+                  <div className={`rounded-2xl p-4 ${message.type === 'user'
                       ? 'bg-gradient-to-r from-blue-500 to-teal-500 text-white rounded-tr-sm'
                       : message.type === 'loading'
-                      ? 'bg-gray-200 text-gray-900 rounded-tl-sm'
-                      : 'bg-gray-100 text-gray-900 rounded-tl-sm'
-                  }`}>
+                        ? 'bg-gray-200 text-gray-900 rounded-tl-sm'
+                        : 'bg-gray-100 text-gray-900 rounded-tl-sm'
+                    }`}>
 
                     {/* LOADING ANIMATION */}
                     {message.type === 'loading' ? (
@@ -186,31 +223,31 @@ console.log("RAG response:", data);
                   </div>
 
                   {/* Sources */}
-             {message.sources && (
-  <div className="mt-2 space-y-2">
-    {message.sources.map((source, index) => (
-      <div
-        key={index}
-        className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 rounded-lg p-2"
-      >
-        <FileText className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                  {message.sources && (
+                    <div className="mt-2 space-y-2">
+                      {message.sources.map((source, index) => (
+                        <div
+                          key={index}
+                          className="flex items-start gap-2 text-xs text-gray-500 bg-gray-50 rounded-lg p-2"
+                        >
+                          <FileText className="w-3 h-3 mt-0.5 flex-shrink-0" />
 
-        <div className="space-y-1">
-          {/* Evidence snippet */}
-          <p className="text-gray-700 line-clamp-3">
-            {source.text}
-          </p>
+                          <div className="space-y-1">
+                            {/* Evidence snippet */}
+                            <p className="text-gray-700 line-clamp-3">
+                              {source.text}
+                            </p>
 
-          {/* Provenance */}
-          <div className="flex gap-3 text-[11px] text-gray-400">
-            <span>📄 {source.source}</span>
-            {source.page && <span>Page {source.page}</span>}
-          </div>
-        </div>
-      </div>
-    ))}
-  </div>
-)}
+                            {/* Provenance */}
+                            <div className="flex gap-3 text-[11px] text-gray-400">
+                              <span>📄 {source.source}</span>
+                              {source.page && <span>Page {source.page}</span>}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
 
                   {/* BOT FOOTER */}
@@ -270,7 +307,7 @@ console.log("RAG response:", data);
                 onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 className="rounded-xl"
               />
-              <Button 
+              <Button
                 onClick={handleSendMessage}
                 className="bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 rounded-xl flex-shrink-0"
               >
