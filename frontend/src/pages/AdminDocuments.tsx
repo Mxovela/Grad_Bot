@@ -30,6 +30,7 @@ import {
   ArrowUpDown
 } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
+import { useLoading } from '../components/ui/loading';
 
 export function AdminDocuments() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,10 +55,12 @@ export function AdminDocuments() {
 
   const [documents, setDocuments] = useState<Array<{ id: string | number; name: string; status?: string; uploadedAt?: string; size?: string; chunks?: number; category?: string }>>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const { setLoading } = useLoading();
  
 
   const fetchDocuments = async () => {
     setLoadingDocuments(true);
+    setLoading(true);
     setDocumentsError(null);
     try {
       const res = await fetch('http://127.0.0.1:8000/documents/get-documents');
@@ -84,6 +87,7 @@ export function AdminDocuments() {
       setDocuments([]);
     } finally {
       setLoadingDocuments(false);
+      setLoading(false);
     }
   };
 

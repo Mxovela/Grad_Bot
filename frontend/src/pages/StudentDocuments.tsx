@@ -5,6 +5,7 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { FileText, Download, Eye, Calendar } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
+import { useLoading } from '../components/ui/loading';
 
 interface Document {
   id: string;
@@ -22,10 +23,12 @@ interface Document {
 export function StudentDocuments() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
+  const { setLoading: setGlobalLoading } = useLoading();
 
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
+        setGlobalLoading(true);
         const res = await fetch('http://127.0.0.1:8000/documents/get-documents');
         const data: Document[] = await res.json();
         setDocuments(data);
@@ -33,6 +36,7 @@ export function StudentDocuments() {
         console.error('Error fetching documents:', error);
       } finally {
         setLoading(false);
+        setGlobalLoading(false);
       }
     };
 

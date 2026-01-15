@@ -6,6 +6,7 @@ import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Search, BookOpen, Eye, Download } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
+import { useLoading } from '../components/ui/loading';
 
 interface Resource {
   id: string;
@@ -32,10 +33,12 @@ export function StudentResources() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [loading, setLoading] = useState(true);
+  const { setLoading: setGlobalLoading } = useLoading();
 
   useEffect(() => {
     const fetchResources = async () => {
       try {
+        setGlobalLoading(true);
         const res = await fetch('http://127.0.0.1:8000/documents/get-documents');
         const data: Resource[] = await res.json();
         setResources(data);
@@ -43,6 +46,7 @@ export function StudentResources() {
         console.error('Error fetching resources:', error);
       } finally {
         setLoading(false);
+        setGlobalLoading(false);
       }
     };
 
