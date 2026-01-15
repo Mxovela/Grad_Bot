@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
-import { Search, BookOpen, Eye, Download } from 'lucide-react';
+import { Search, BookOpen, Eye, Download, Loader2 } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 import { useLoading } from '../components/ui/loading';
 
@@ -34,6 +34,7 @@ export function StudentResources() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [loading, setLoading] = useState(true);
   const { setLoading: setGlobalLoading } = useLoading();
+  const [viewingDocId, setViewingDocId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchResources = async () => {
@@ -62,11 +63,14 @@ export function StudentResources() {
 
   const handleView = async (id: string) => {
     try {
+      setViewingDocId(id);
       const res = await fetch(`http://127.0.0.1:8000/documents/${id}/view`);
       const data = await res.json();
       window.open(data.url, '_blank');
     } catch (err) {
       console.error('Error fetching document URL:', err);
+    } finally {
+      setViewingDocId(null);
     }
   };
 
@@ -152,8 +156,18 @@ export function StudentResources() {
                     <span>{res.views} views</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="rounded-lg" onClick={() => handleView(res.id)}>
-                      <Eye className="w-4 h-4 mr-2" />
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="rounded-lg" 
+                      onClick={() => handleView(res.id)}
+                      disabled={viewingDocId === res.id}
+                    >
+                      {viewingDocId === res.id ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Eye className="w-4 h-4 mr-2" />
+                      )}
                       View
                     </Button>
                     <Button variant="outline" size="sm" className="rounded-lg" onClick={() => handleDownload(res.id, res.file_name)}>

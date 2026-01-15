@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { FileText, Download, Eye, Calendar } from 'lucide-react';
+import { FileText, Download, Eye, Calendar, Loader2 } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 import { useLoading } from '../components/ui/loading';
 
@@ -24,6 +24,7 @@ export function StudentDocuments() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const { setLoading: setGlobalLoading } = useLoading();
+  const [viewingDocId, setViewingDocId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDocuments = async () => {
@@ -53,11 +54,14 @@ export function StudentDocuments() {
 
   const handleView = async (docId: string) => {
     try {
+      setViewingDocId(docId);
       const res = await fetch(`http://127.0.0.1:8000/documents/${docId}/download`);
       const data = await res.json();
       window.open(data.url, '_blank'); // open in new tab
     } catch (err) {
       console.error('Error fetching document URL:', err);
+    } finally {
+      setViewingDocId(null);
     }
   };
 
@@ -134,8 +138,13 @@ export function StudentDocuments() {
                   size="sm"
                   className="rounded-lg"
                   onClick={() => handleView(doc.id)}
+                  disabled={viewingDocId === doc.id}
                 >
-                  <Eye className="w-4 h-4 mr-2" />
+                  {viewingDocId === doc.id ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <Eye className="w-4 h-4 mr-2" />
+                  )}
                   View
                 </Button>
                 <Button
