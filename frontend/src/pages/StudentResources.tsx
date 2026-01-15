@@ -78,13 +78,22 @@ export function StudentResources() {
     try {
       const res = await fetch(`http://127.0.0.1:8000/documents/${id}/download`);
       const data = await res.json();
+      const url = (data as any)?.url ?? data;
+      if (!url) throw new Error('No download URL returned');
+
+      const fileRes = await fetch(url);
+      if (!fileRes.ok) throw new Error(`HTTP ${fileRes.status}`);
+      const blob = await fileRes.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
 
       const link = document.createElement('a');
-      link.href = data.url;
+      link.href = blobUrl;
       link.download = fileName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+
+      window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
       console.error('Error downloading document:', err);
     }

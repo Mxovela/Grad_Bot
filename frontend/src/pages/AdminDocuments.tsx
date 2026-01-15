@@ -248,8 +248,22 @@ export function AdminDocuments() {
       const data = await res.json().catch(() => null);
       const url = data?.url ?? data;
       if (!url) throw new Error('No download URL returned');
-      // open in new tab
-      window.open(url, '_blank');
+      
+      const fileRes = await fetch(url);
+      if (!fileRes.ok) throw new Error(`HTTP ${fileRes.status}`);
+      const blob = await fileRes.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      if (filename) {
+        link.download = filename;
+      }
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      window.URL.revokeObjectURL(blobUrl);
     } catch (err: any) {
       setDocumentsError(err?.message ?? 'Failed to download document');
     }
