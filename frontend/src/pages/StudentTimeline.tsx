@@ -1,54 +1,41 @@
+import { useEffect, useState } from 'react';
 import { Card } from '../components/ui/card';
 import { CheckCircle2, Circle, Clock } from 'lucide-react';
 import { Progress } from '../components/ui/progress';
+import { useLoading } from '../components/ui/loading';
 
 export function StudentTimeline() {
-  const milestones = [
-    {
-      week: 'Week 1',
-      title: 'Orientation & Onboarding',
-      status: 'completed',
-      tasks: [
-        { name: 'Complete HR paperwork', completed: true },
-        { name: 'Set up accounts and tools', completed: true },
-        { name: 'Meet your team', completed: true },
-        { name: 'Review company policies', completed: true },
-      ]
-    },
-    {
-      week: 'Weeks 2-4',
-      title: 'Technical Training',
-      status: 'in-progress',
-      tasks: [
-        { name: 'Cloud fundamentals course', completed: true },
-        { name: 'Development tools workshop', completed: true },
-        { name: 'Security training', completed: false },
-        { name: 'Architecture overview', completed: false },
-      ]
-    },
-    {
-      week: 'Weeks 5-8',
-      title: 'Project Shadowing',
-      status: 'upcoming',
-      tasks: [
-        { name: 'Shadow senior developer', completed: false },
-        { name: 'Code review participation', completed: false },
-        { name: 'Team sprint planning', completed: false },
-        { name: 'Technical documentation review', completed: false },
-      ]
-    },
-    {
-      week: 'Weeks 9-12',
-      title: 'First Independent Project',
-      status: 'upcoming',
-      tasks: [
-        { name: 'Project assignment', completed: false },
-        { name: 'Design and planning', completed: false },
-        { name: 'Implementation', completed: false },
-        { name: 'Code review and deployment', completed: false },
-      ]
-    },
-  ];
+  const [milestones, setMilestones] = useState<any[]>([]);
+  const { loading, setLoading } = useLoading();
+
+  useEffect(() => {
+    const fetchMilestones = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      setLoading(true);
+      try {
+        // Get user id from /auth/me
+        const userRes = await fetch('http://127.0.0.1:8000/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!userRes.ok) throw new Error('Failed to fetch user');
+        const user = await userRes.json();
+        const userId = user.id;
+        // Fetch milestones/tasks
+        const res = await fetch(`http://127.0.0.1:8000/timeline/${userId}/milestones-tasks`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error('Failed to fetch milestones');
+        const data = await res.json();
+        setMilestones(data);
+      } catch (e) {
+        setMilestones([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMilestones();
+  }, [setLoading]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -77,6 +64,9 @@ export function StudentTimeline() {
     return (completed / tasks.length) * 100;
   };
 
+  // Use fetched milestones if available, else fallback to static
+  const timelineData = milestones
+
   return (
     <div className="pt-8 space-y-8">
       {/* Overall progress */}
@@ -100,7 +90,7 @@ export function StudentTimeline() {
         <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200" />
 
         <div className="space-y-8">
-          {milestones.map((milestone, index) => {
+          {timelineData.map((milestone, index) => {
             const progress = calculateProgress(milestone.tasks);
             
             return (
@@ -114,7 +104,7 @@ export function StudentTimeline() {
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
                       <div>
-                        <p className="text-sm text-gray-600 mb-1">{milestone.week}</p>
+                        <p className="text-sm text-gray-600 mb-1">{milestone.week_label}</p>
                         <h3 style={{ color: 'var(--foreground)' }}>{milestone.title}</h3>
                       </div>
                       {milestone.status === 'completed' && (
@@ -146,7 +136,7 @@ export function StudentTimeline() {
                   </div>
 
                   <div className="space-y-2">
-                    {milestone.tasks.map((task, taskIndex) => (
+                    {milestone.tasks.map((task: any, taskIndex: number) => (
                       <div 
                         key={taskIndex} 
                         className="flex items-center gap-3 p-3 rounded-lg bg-white/50"
