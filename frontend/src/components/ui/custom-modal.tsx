@@ -7,6 +7,10 @@ interface CustomModalProps {
   title?: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  overlayOpacity?: number;
+  overlayBlur?: number;
+  overlayColor?: string;
+  zIndex?: number;
 }
 
 export  function CustomModal({
@@ -15,6 +19,10 @@ export  function CustomModal({
   title,
   children,
   footer,
+  overlayOpacity = 0.6,
+  overlayBlur = 12,
+  overlayColor = "rgba(0,0,0,0.6)",
+  zIndex = 40,
 }: CustomModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
@@ -90,16 +98,16 @@ export  function CustomModal({
   return createPortal(
     <div
       className="fixed inset-0"
-      style={{ zIndex: 40 }}
+      style={{ zIndex }}
       role="dialog"
       aria-modal="true"
     >
       <div
         className="absolute inset-0"
         style={{
-          backgroundColor: "rgba(0,0,0,0.6)",
-          backdropFilter: "blur(12px)",
-          opacity: overlayVisible && !exiting ? 1 : 0,
+          backgroundColor: overlayColor,
+          backdropFilter: overlayBlur > 0 ? `blur(${overlayBlur}px)` : "none",
+          opacity: overlayVisible && !exiting ? overlayOpacity : 0,
           transition: "opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1)",
         }}
         onClick={() => {
