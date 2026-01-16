@@ -3,6 +3,8 @@ import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
+import { Skeleton } from '../components/ui/skeleton';
+import { useLoading } from '../components/ui/loading';
 import { Search, MoreVertical, UserCircle2 } from 'lucide-react';
 
 type GraduateUser = {
@@ -20,9 +22,11 @@ export function AdminUserManagement() {
   const [users, setUsers] = useState<GraduateUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
+  const { setLoading } = useLoading();
 
   const fetchUsers = async () => {
     setLoadingUsers(true);
+    setLoading(true);
     setUsersError(null);
     try {
       const res = await fetch('http://127.0.0.1:8000/graduates/list');
@@ -55,6 +59,15 @@ export function AdminUserManagement() {
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  useEffect(() => {
+    if (!loadingUsers) {
+      const timeoutId = setTimeout(() => {
+        setLoading(false);
+      }, 200);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [loadingUsers, setLoading]);
 
   const filteredUsers = users.filter((user) => {
     const query = searchQuery.toLowerCase();
@@ -113,13 +126,36 @@ export function AdminUserManagement() {
             </thead>
             <tbody>
               {loadingUsers ? (
-                <tr>
-                  <td className="p-6" colSpan={7}>
-                    <div className="text-center text-muted-foreground">
-                      Loading users...
-                    </div>
-                  </td>
-                </tr>
+                Array.from({ length: 4 }).map((_, index) => (
+                  <tr key={index} className="border-b border-gray-100">
+                    <td className="p-6">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="w-10 h-10 rounded-lg" />
+                        <div className="space-y-2 flex-1">
+                          <Skeleton className="h-3 w-32" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-6">
+                      <Skeleton className="h-3 w-24" />
+                    </td>
+                    <td className="p-6">
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </td>
+                    <td className="p-6">
+                      <Skeleton className="h-3 w-40" />
+                    </td>
+                    <td className="p-6">
+                      <Skeleton className="h-3 w-32" />
+                    </td>
+                    <td className="p-6">
+                      <Skeleton className="h-3 w-16" />
+                    </td>
+                    <td className="p-6">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                    </td>
+                  </tr>
+                ))
               ) : filteredUsers.length === 0 ? (
                 <tr>
                   <td className="p-6" colSpan={7}>
