@@ -12,9 +12,5 @@
       <LoadingProvider>
         <App />
       </LoadingProvider>
-    </ThemeProvider>)
- 
     </ThemeProvider>
-
-  
   )
