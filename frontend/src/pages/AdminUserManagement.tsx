@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { CustomModal } from '../components/ui/custom-modal';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Skeleton } from '../components/ui/skeleton';
 import { useLoading } from '../components/ui/loading';
-import { Search, MoreVertical, UserCircle2 } from 'lucide-react';
+import { Alert, AlertDescription } from '../components/ui/alert';
+import { Search, MoreVertical, UserCircle2, AlertCircle } from 'lucide-react';
 
 type GraduateUser = {
   id: string | number;
@@ -22,6 +25,8 @@ export function AdminUserManagement() {
   const [users, setUsers] = useState<GraduateUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
+  const [openMenuUserId, setOpenMenuUserId] = useState<string | number | null>(null);
+  const [confirmUserId, setConfirmUserId] = useState<string | number | null>(null);
   const { setLoading } = useLoading();
 
   const fetchUsers = async () => {
@@ -29,7 +34,7 @@ export function AdminUserManagement() {
     setLoading(true);
     setUsersError(null);
     try {
-      const res = await fetch('http://127.0.0.1:8000/graduates/list');
+      const res = await fetch(`http://127.0.0.1:8000/graduates/list?t=${new Date().getTime()}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
@@ -80,6 +85,21 @@ export function AdminUserManagement() {
     );
   });
 
+  const handleDelete = async (id: string | number) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/graduates/${id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await fetchUsers();
+    } catch (err: any) {
+      setUsersError(err?.message ?? 'Failed to delete user');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="pt-8 space-y-8">
       <Card className="p-6 border-gray-200">
@@ -95,6 +115,13 @@ export function AdminUserManagement() {
           </div>
         </div>
       </Card>
+      
+      {usersError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{usersError}</AlertDescription>
+        </Alert>
+      )}
 
       <Card className="border-gray-200">
         <div className="overflow-x-auto">
@@ -216,14 +243,46 @@ export function AdminUserManagement() {
                     </td>
                     <td className="p-6">
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          title="More actions"
-                        >
-                          <MoreVertical className="w-4 h-4 text-gray-600" />
-                        </Button>
+                        <div className="relative inline-block">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            title="More actions"
+                            onClick={() =>
+                              setOpenMenuUserId((current) =>
+                                current === user.id ? null : user.id
+                              )
+                            }
+                          >
+                            <MoreVertical className="w-4 h-4 text-gray-600" />
+                          </Button>
+                          {openMenuUserId === user.id && (
+                            <div
+                              className="absolute right-0 mt-2 w-28 rounded-md border bg-white shadow-lg z-50"
+                            >
+                              <button
+                                className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
+                                type="button"
+                                onClick={() => {
+                                  setOpenMenuUserId(null);
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                                type="button"
+                                onClick={() => {
+                                  setOpenMenuUserId(null);
+                                  setConfirmUserId(user.id);
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -233,6 +292,35 @@ export function AdminUserManagement() {
           </table>
         </div>
       </Card>
+      <CustomModal
+        open={confirmUserId != null}
+        onClose={() => setConfirmUserId(null)}
+        title="Delete this user?"
+        overlayOpacity={0}
+        overlayBlur={0}
+        zIndex={2147483601}
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setConfirmUserId(null)}>
+              No
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                const id = confirmUserId!;
+                setConfirmUserId(null);
+                await handleDelete(id);
+              }}
+            >
+              Yes
+            </Button>
+          </>
+        }
+      >
+        <div className="text-sm text-muted-foreground">
+          This action will permanently remove the user and related records.
+        </div>
+      </CustomModal>
     </div>
   );
 }
