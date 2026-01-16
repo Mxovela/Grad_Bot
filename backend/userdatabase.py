@@ -217,24 +217,24 @@ def delete_user(user_id: str) -> bool:
     
         try:
             print(f"Attempting to delete from graduates table for user_id: {user_id}")
-            grad_del = supabase.table("graduates").delete().eq("id", user_id).execute()
-            print(f"Deleted from graduates: {grad_del.data}")
+            grad_del = supabase.table("User").delete().eq("id", user_id).execute()
+            print(f"Deleted from User: {grad_del.data}")
         except Exception as e:
-            print(f"CRITICAL ERROR deleting from graduates: {e}")
+            print(f"CRITICAL ERROR deleting from User: {e}")
 
     
-        tables = ["contact", "profile"]
-        for table in tables:
-            try:
-                supabase.table(table).delete().eq("id", user_id).execute()
-            except Exception as e:
-                print(f"Error deleting from {table}: {e}")
+        # tables = ["contact", "profile"]
+        # for table in tables:
+        #     try:
+        #         supabase.table(table).delete().eq("id", user_id).execute()
+        #     except Exception as e:
+        #         print(f"Error deleting from {table}: {e}")
 
     
-        response = supabase.table("User").delete().eq("id", user_id).execute()
+        # response = supabase.table("User").delete().eq("id", user_id).execute()
 
-        if not response.data:
-            print(f"Warning: User {user_id} not found in User table or deletion failed.")
+        # if not response.data:
+        #     print(f"Warning: User {user_id} not found in User table or deletion failed.")
             
         return True
     except Exception as e:
