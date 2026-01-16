@@ -146,4 +146,3 @@ def new_user(email, role, first_name, last_name, password, phone=""):
     ).data
     
     return response
- 
