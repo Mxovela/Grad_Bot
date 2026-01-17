@@ -9,7 +9,7 @@ import { Skeleton } from '../components/ui/skeleton';
 import { useLoading } from '../components/ui/loading';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Label } from '../components/ui/label';
-import { Search, MoreVertical, UserCircle2, AlertCircle } from 'lucide-react';
+import { Search, MoreVertical, UserCircle2, AlertCircle, Plus } from 'lucide-react';
 
 type GraduateUser = {
   id: string | number;
@@ -28,6 +28,14 @@ export function AdminUserManagement() {
   const [usersError, setUsersError] = useState<string | null>(null);
   const [openMenuUserId, setOpenMenuUserId] = useState<string | number | null>(null);
   const [confirmUserId, setConfirmUserId] = useState<string | number | null>(null);
+  const [createForm, setCreateForm] = useState<{
+    firstName: string;
+    lastName: string;
+    role: string;
+    email: string;
+    phone: string;
+    password: string;
+  } | null>(null);
   const [editingUser, setEditingUser] = useState<GraduateUser | null>(null);
   const [editForm, setEditForm] = useState<{
     firstName: string;
@@ -109,6 +117,47 @@ export function AdminUserManagement() {
     }
   };
 
+  const handleCreate = async () => {
+    if (!createForm) return;
+    setLoading(true);
+    setUsersError(null);
+    try {
+      const res = await fetch('http://127.0.0.1:8000/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: createForm.email,
+          password: createForm.password,
+          first_name: createForm.firstName,
+          last_name: createForm.lastName,
+          role: createForm.role,
+          phone: createForm.phone || '',
+        }),
+      });
+      if (!res.ok) {
+        let message = `HTTP ${res.status}`;
+        try {
+          const data = await res.json();
+          if (data?.detail) {
+            message = Array.isArray(data.detail)
+              ? data.detail[0]?.msg ?? message
+              : data.detail;
+          }
+        } catch {
+        }
+        throw new Error(message);
+      }
+      await fetchUsers();
+      setCreateForm(null);
+    } catch (err: any) {
+      setUsersError(err?.message ?? 'Failed to create user');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const openEditModal = (user: GraduateUser) => {
     setEditingUser(user);
     setEditForm({
@@ -168,6 +217,30 @@ export function AdminUserManagement() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 rounded-xl"
             />
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="inline-flex items-center gap-2 rounded-xl px-3 py-2 bg-primary text-primary-foreground">
+              <UserCircle2 className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                {filteredUsers.length}
+              </span>
+            </div>
+            <Button
+              className="rounded-xl"
+              onClick={() =>
+                setCreateForm({
+                  firstName: '',
+                  lastName: '',
+                  role: 'Graduate',
+                  email: '',
+                  phone: '',
+                  password: '',
+                })
+              }
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add
+            </Button>
           </div>
         </div>
       </Card>
@@ -341,6 +414,118 @@ export function AdminUserManagement() {
           </table>
         </div>
       </Card>
+      <CustomModal
+        open={createForm != null}
+        onClose={() => setCreateForm(null)}
+        title="Add user"
+        overlayOpacity={0}
+        overlayBlur={0}
+        zIndex={2147483601}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => setCreateForm(null)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleCreate}>
+              Create
+            </Button>
+          </>
+        }
+      >
+        {createForm && (
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label htmlFor="newFirstName">First name</Label>
+              <Input
+                id="newFirstName"
+                value={createForm.firstName}
+                onChange={(e) =>
+                  setCreateForm((prev) =>
+                    prev
+                      ? { ...prev, firstName: e.target.value }
+                      : prev
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="newLastName">Last name</Label>
+              <Input
+                id="newLastName"
+                value={createForm.lastName}
+                onChange={(e) =>
+                  setCreateForm((prev) =>
+                    prev
+                      ? { ...prev, lastName: e.target.value }
+                      : prev
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="newRole">Role</Label>
+              <Input
+                id="newRole"
+                value={createForm.role}
+                onChange={(e) =>
+                  setCreateForm((prev) =>
+                    prev
+                      ? { ...prev, role: e.target.value }
+                      : prev
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="newEmail">Email</Label>
+              <Input
+                id="newEmail"
+                type="email"
+                value={createForm.email}
+                onChange={(e) =>
+                  setCreateForm((prev) =>
+                    prev
+                      ? { ...prev, email: e.target.value }
+                      : prev
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="newPhone">Phone</Label>
+              <Input
+                id="newPhone"
+                value={createForm.phone}
+                onChange={(e) =>
+                  setCreateForm((prev) =>
+                    prev
+                      ? { ...prev, phone: e.target.value }
+                      : prev
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="newPassword">Password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={createForm.password}
+                onChange={(e) =>
+                  setCreateForm((prev) =>
+                    prev
+                      ? { ...prev, password: e.target.value }
+                      : prev
+                  )
+                }
+              />
+            </div>
+          </div>
+        )}
+      </CustomModal>
       <CustomModal
         open={editingUser != null && editForm != null}
         onClose={() => {
