@@ -8,6 +8,7 @@ import { Badge } from '../components/ui/badge';
 import { Skeleton } from '../components/ui/skeleton';
 import { useLoading } from '../components/ui/loading';
 import { Alert, AlertDescription } from '../components/ui/alert';
+import { Label } from '../components/ui/label';
 import { Search, MoreVertical, UserCircle2, AlertCircle } from 'lucide-react';
 
 type GraduateUser = {
@@ -27,6 +28,14 @@ export function AdminUserManagement() {
   const [usersError, setUsersError] = useState<string | null>(null);
   const [openMenuUserId, setOpenMenuUserId] = useState<string | number | null>(null);
   const [confirmUserId, setConfirmUserId] = useState<string | number | null>(null);
+  const [editingUser, setEditingUser] = useState<GraduateUser | null>(null);
+  const [editForm, setEditForm] = useState<{
+    firstName: string;
+    lastName: string;
+    role: string;
+    email: string;
+    phone: string;
+  } | null>(null);
   const { setLoading } = useLoading();
 
   const fetchUsers = async () => {
@@ -95,6 +104,53 @@ export function AdminUserManagement() {
       await fetchUsers();
     } catch (err: any) {
       setUsersError(err?.message ?? 'Failed to delete user');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const openEditModal = (user: GraduateUser) => {
+    setEditingUser(user);
+    setEditForm({
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      role: user.role || 'Graduate',
+      email: user.email || '',
+      phone: user.phone || '',
+    });
+    setOpenMenuUserId(null);
+  };
+
+  const handleUpdate = async () => {
+    if (!editingUser || !editForm) return;
+    setLoading(true);
+    try {
+      const res = await fetch('http://127.0.0.1:8000/auth/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: String(editingUser.id),
+          email: editForm.email,
+          role: editForm.role,
+          first_name: editForm.firstName,
+          last_name: editForm.lastName,
+          phone: editForm.phone || null,
+          department: null,
+          branch: null,
+          start_date: null,
+          bio: null,
+          linkedin_link: null,
+          github_link: null,
+        }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await fetchUsers();
+      setEditingUser(null);
+      setEditForm(null);
+    } catch (err: any) {
+      setUsersError(err?.message ?? 'Failed to update user');
     } finally {
       setLoading(false);
     }
@@ -198,26 +254,20 @@ export function AdminUserManagement() {
                 filteredUsers.map((user) => (
                   <tr
                     key={user.id}
-                    className="border-b border-gray-100 hover:bg-gray-50"
+                    className="border-b border-gray-100 hover:bg-white hover:text-black"
                   >
                     <td className="p-6">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
                           <UserCircle2 className="w-5 h-5 text-gray-600" />
                         </div>
-                        <span
-                          style={{ color: 'var(--foreground)' }}
-                          className="text-sm"
-                        >
+                        <span className="text-sm">
                           {user.firstName || '-'}
                         </span>
                       </div>
                     </td>
                     <td className="p-6">
-                      <span
-                        style={{ color: 'var(--foreground)' }}
-                        className="text-sm"
-                      >
+                      <span className="text-sm">
                         {user.lastName || '-'}
                       </span>
                     </td>
@@ -227,17 +277,17 @@ export function AdminUserManagement() {
                       </Badge>
                     </td>
                     <td className="p-6">
-                      <span className="text-gray-600 text-sm">
+                      <span className="text-sm">
                         {user.email || '-'}
                       </span>
                     </td>
                     <td className="p-6">
-                      <span className="text-gray-600 text-sm">
+                      <span className="text-sm">
                         {user.phone || '-'}
                       </span>
                     </td>
                     <td className="p-6">
-                      <span className="text-gray-600 text-sm">
+                      <span className="text-sm">
                         {user.progress ?? '-'}
                       </span>
                     </td>
@@ -259,14 +309,13 @@ export function AdminUserManagement() {
                           </Button>
                           {openMenuUserId === user.id && (
                             <div
-                              className="absolute right-0 mt-2 w-28 rounded-md border bg-white shadow-lg z-50"
+                              className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-28 rounded-md border bg-white shadow-lg z-50"
                             >
                               <button
                                 className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
                                 type="button"
-                                onClick={() => {
-                                  setOpenMenuUserId(null);
-                                }}
+                                style={{ color: '#000000' }}
+                                onClick={() => openEditModal(user)}
                               >
                                 Edit
                               </button>
@@ -292,6 +341,109 @@ export function AdminUserManagement() {
           </table>
         </div>
       </Card>
+      <CustomModal
+        open={editingUser != null && editForm != null}
+        onClose={() => {
+          setEditingUser(null);
+          setEditForm(null);
+        }}
+        title="Edit user"
+        overlayOpacity={0}
+        overlayBlur={0}
+        zIndex={2147483601}
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditingUser(null);
+                setEditForm(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUpdate}>
+              Update
+            </Button>
+          </>
+        }
+      >
+        {editForm && (
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label htmlFor="firstName">First name</Label>
+              <Input
+                id="firstName"
+                value={editForm.firstName}
+                onChange={(e) =>
+                  setEditForm((prev) =>
+                    prev
+                      ? { ...prev, firstName: e.target.value }
+                      : prev
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="lastName">Last name</Label>
+              <Input
+                id="lastName"
+                value={editForm.lastName}
+                onChange={(e) =>
+                  setEditForm((prev) =>
+                    prev
+                      ? { ...prev, lastName: e.target.value }
+                      : prev
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="role">Role</Label>
+              <Input
+                id="role"
+                value={editForm.role}
+                onChange={(e) =>
+                  setEditForm((prev) =>
+                    prev
+                      ? { ...prev, role: e.target.value }
+                      : prev
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) =>
+                  setEditForm((prev) =>
+                    prev
+                      ? { ...prev, email: e.target.value }
+                      : prev
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                value={editForm.phone}
+                onChange={(e) =>
+                  setEditForm((prev) =>
+                    prev
+                      ? { ...prev, phone: e.target.value }
+                      : prev
+                  )
+                }
+              />
+            </div>
+          </div>
+        )}
+      </CustomModal>
       <CustomModal
         open={confirmUserId != null}
         onClose={() => setConfirmUserId(null)}
