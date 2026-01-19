@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
 import { useLoading } from '../components/ui/loading';
-import { CheckCircle2, Circle, Edit2 } from 'lucide-react';
+import { CheckCircle2, Circle, Edit2, Plus, Trash2, ClipboardList, Flag, Search } from 'lucide-react';
 
 export function AdminTaskManagement() {
   const [milestones, setMilestones] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const { setLoading } = useLoading();
   const [error, setError] = useState<string | null>(null);
 
@@ -42,6 +44,25 @@ export function AdminTaskManagement() {
     alert(`Modify clicked for milestone ${milestoneId}`);
   };
 
+  const handleAddMilestone = () => {
+    // Placeholder for Add Milestone functionality
+    console.log("Add Milestone clicked");
+    alert("Add Milestone clicked");
+  };
+
+  const handleDeleteAll = () => {
+    // Placeholder for Delete All functionality
+    console.log("Delete All clicked");
+    alert("Delete All clicked");
+  };
+
+  const totalTasks = milestones.reduce((acc, milestone) => acc + (milestone.tasks?.length || 0), 0);
+
+  const filteredMilestones = milestones.filter(milestone => 
+    milestone.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    milestone.tasks.some((task: any) => task.name.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
   return (
     <div className="pt-8 space-y-8">
       <div className="flex items-center justify-between">
@@ -52,6 +73,64 @@ export function AdminTaskManagement() {
         </div>
       </div>
 
+      <div className="flex items-center justify-between bg-white !bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+        {/* Left Side: Search */}
+        <div className="relative w-96">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search milestones or tasks..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 bg-white border-gray-200 text-black placeholder:text-gray-500"
+          />
+        </div>
+
+        {/* Right Side: Stats and Buttons */}
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-blue-100 !bg-blue-100 rounded-lg">
+              <ClipboardList className="w-5 h-5 text-blue-600 !text-blue-600" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm text-black !text-black font-medium" style={{ color: 'black' }}>Total Tasks</span>
+              <span className="text-xl font-bold text-black !text-black" style={{ color: 'black' }}>{totalTasks}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-blue-100 !bg-blue-100 rounded-lg">
+              <Flag className="w-5 h-5 text-blue-600 !text-blue-600" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm text-black !text-black font-medium" style={{ color: 'black' }}>Total Milestones</span>
+              <span className="text-xl font-bold text-black !text-black" style={{ color: 'black' }}>{milestones.length}</span>
+            </div>
+          </div>
+
+          <div className="h-8 w-px bg-gray-200 mx-2" />
+
+          <div className="flex items-center gap-3">
+            <Button 
+              onClick={handleAddMilestone} 
+              className="gap-2 !bg-black hover:!bg-gray-800 !text-white border-0"
+              style={{ backgroundColor: 'black', color: 'white' }}
+            >
+              <Plus className="w-4 h-4" />
+              Add Milestone
+            </Button>
+            
+            <Button 
+              variant="destructive" 
+              onClick={handleDeleteAll}
+              className="gap-2 text-white"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete All
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {error && (
         <div className="text-red-600 font-medium p-4 bg-red-50 rounded-lg">
           {error}
@@ -59,7 +138,7 @@ export function AdminTaskManagement() {
       )}
 
       <div className="space-y-6">
-        {milestones.map((milestone) => (
+        {filteredMilestones.map((milestone) => (
           <Card key={milestone.milestone_id} className="p-6 border-gray-200">
             <div className="flex items-start justify-between mb-6">
               <div>
