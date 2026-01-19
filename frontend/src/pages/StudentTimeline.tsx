@@ -10,6 +10,7 @@ export function StudentTimeline() {
   const { loading, setLoading } = useLoading();
   const [error, setError] = useState<string | null>(null);
   const completedMilestonesRef = useRef<Set<string>>(new Set());
+  const milestoneRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
     const fetchMilestones = async () => {
@@ -125,9 +126,37 @@ export function StudentTimeline() {
         completedMilestonesRef.current.add(milestoneId);
         confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
       }
+      
+      // Automatically start next milestone if it exists and is upcoming
+      const nextMilestoneIndex = milestoneIndex + 1;
+      if (nextMilestoneIndex < updated.length) {
+        const nextMilestone = updated[nextMilestoneIndex];
+        if (nextMilestone.status === 'Upcoming') {
+          nextMilestone.status = 'In-Progress';
+          
+          // Smooth scroll to the next milestone after a short delay
+          setTimeout(() => {
+            milestoneRefs.current[nextMilestoneIndex]?.scrollIntoView({
+              behavior: 'smooth',
+              block: 'center'
+            });
+          }, 600);
+        }
+      }
     } else if (milestone.status === 'Completed') {
       milestone.status = 'In-Progress';
       completedMilestonesRef.current.delete(milestoneId);
+
+      // Revert next milestone to Upcoming if it has no progress
+      const nextMilestoneIndex = milestoneIndex + 1;
+      if (nextMilestoneIndex < updated.length) {
+        const nextMilestone = updated[nextMilestoneIndex];
+        const nextHasProgress = nextMilestone.tasks.some((t: any) => t.completed);
+        
+        if (nextMilestone.status === 'In-Progress' && !nextHasProgress) {
+          nextMilestone.status = 'Upcoming';
+        }
+      }
     }
 
     setMilestones(updated);
@@ -187,7 +216,11 @@ export function StudentTimeline() {
           {milestones.map((milestone, index) => {
             const milestoneProgress = getMilestoneProgress(milestone);
             return (
-              <div key={index} className="relative pl-16">
+              <div 
+                key={index} 
+                className="relative pl-16"
+                ref={el => { milestoneRefs.current[index] = el }}
+              >
                 <div className="absolute left-3 top-6 -translate-x-1/2">
                   {getStatusIcon(milestone.status)}
                 </div>
