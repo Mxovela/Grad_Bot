@@ -34,12 +34,14 @@ export function AdminTaskManagement() {
   const [milestoneToDelete, setMilestoneToDelete] = useState<string | null>(null);
 
   // Edit Modal State
+  const [isEditGraduateDropdownOpen, setIsEditGraduateDropdownOpen] = useState(false);
   const [editingMilestone, setEditingMilestone] = useState<{
     id: string;
     title: string;
     week_label: string;
     tasks: { id?: string; name: string }[];
     graduate_id: string | null;
+    graduate_ids: string[];
   } | null>(null);
 
   const getGraduateName = (graduateId: string | null) => {
@@ -137,7 +139,8 @@ export function AdminTaskManagement() {
         title: milestone.title,
         week_label: milestone.week_label,
         tasks: milestone.tasks.map((t: any) => ({ id: t.task_id, name: t.name })),
-        graduate_id: milestone.graduate_id || null
+        graduate_id: milestone.graduate_id || null,
+        graduate_ids: milestone.graduate_id ? [milestone.graduate_id] : []
       });
     }
   };
@@ -178,7 +181,8 @@ export function AdminTaskManagement() {
         body: JSON.stringify({
           title: editingMilestone.title,
           week_label: editingMilestone.week_label,
-          tasks: editingMilestone.tasks.filter(t => t.name.trim() !== "")
+          tasks: editingMilestone.tasks.filter(t => t.name.trim() !== ""),
+          graduate_ids: editingMilestone.graduate_ids
         })
       });
 
@@ -663,21 +667,66 @@ export function AdminTaskManagement() {
                 />
             </div>
 
-            <div className="grid gap-2">
-              <Label htmlFor="edit-graduate">Assign to Graduate</Label>
-              <select
-                id="edit-graduate"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                value={editingMilestone.graduate_id || ""}
-                onChange={(e) => setEditingMilestone({ ...editingMilestone, graduate_id: e.target.value || null })}
+            <div className="grid gap-2 relative">
+              <Label>Assign to Graduates</Label>
+              <div 
+                className="border rounded-md p-2 cursor-pointer bg-white flex justify-between items-center"
+                onClick={() => setIsEditGraduateDropdownOpen(!isEditGraduateDropdownOpen)}
               >
-                <option value="">All Graduates</option>
-                {graduates.map((grad) => (
-                  <option key={grad.id} value={grad.id}>
-                    {grad.first_name} {grad.last_name}
-                  </option>
-                ))}
-              </select>
+                <span className="text-sm text-black">
+                  {editingMilestone.graduate_ids.length === 0 
+                    ? "Select Graduates (Optional)" 
+                    : `${editingMilestone.graduate_ids.length} Graduate(s) Selected`}
+                </span>
+                <span className="text-gray-400">▼</span>
+              </div>
+
+              {isEditGraduateDropdownOpen && (
+                <div className="absolute top-[75px] left-0 right-0 z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto p-2">
+                  <div 
+                    className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer"
+                    onClick={() => {
+                      if (editingMilestone.graduate_ids.length === graduates.length) {
+                          setEditingMilestone({...editingMilestone, graduate_ids: []});
+                      } else {
+                          setEditingMilestone({...editingMilestone, graduate_ids: graduates.map(g => g.id)});
+                      }
+                    }}
+                  >
+                      <input 
+                          type="checkbox" 
+                          checked={editingMilestone.graduate_ids.length === graduates.length && graduates.length > 0}
+                          readOnly
+                          className="pointer-events-none"
+                      />
+                      <span className="text-sm font-semibold text-black">Select All</span>
+                  </div>
+                  <hr className="my-1 border-gray-200" />
+                  {graduates.map((grad) => (
+                    <div 
+                      key={grad.id} 
+                      className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer"
+                      onClick={() => {
+                          const ids = editingMilestone.graduate_ids.includes(grad.id)
+                              ? editingMilestone.graduate_ids.filter(id => id !== grad.id)
+                              : [...editingMilestone.graduate_ids, grad.id];
+                          setEditingMilestone({ ...editingMilestone, graduate_ids: ids });
+                      }}
+                    >
+                      <input 
+                        type="checkbox" 
+                        checked={editingMilestone.graduate_ids.includes(grad.id)} 
+                        readOnly
+                        className="pointer-events-none"
+                      />
+                      <span className="text-sm text-black">{grad.first_name} {grad.last_name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                  Updating assignments will reassign this milestone to the first selected graduate and create copies for others.
+              </p>
             </div>
             
             <div className="grid gap-2">

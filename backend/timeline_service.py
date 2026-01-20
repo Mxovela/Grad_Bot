@@ -222,7 +222,7 @@ def create_milestone_with_tasks(title: str, week_label: str, tasks: list[str], g
         traceback.print_exc()
         raise e
 
-def update_milestone_with_tasks(milestone_id: str, title: str, week_label: str, tasks: list[dict], graduate_id: UUID | None = None):
+def update_milestone_with_tasks(milestone_id: str, title: str, week_label: str, tasks: list[dict], graduate_ids: list[UUID] | None = None):
     try:
         # 1. Update Milestone details
         # Parse start/end week
@@ -237,14 +237,20 @@ def update_milestone_with_tasks(milestone_id: str, title: str, week_label: str, 
             "end_week": end_week
         }
         
-        # Only update graduate_id if provided (or explicitly None if that's the intent, 
-        # but here we assume the payload contains the new state, so we update it)
-        # Note: If the frontend sends null, we update it to null (unassign).
-        update_data["graduate_id"] = str(graduate_id) if graduate_id else None
+        # Determine Primary Target (for the existing milestone) and Secondary Targets (for new copies)
+        primary_target = None
+        secondary_targets = []
+        
+        if graduate_ids:
+            primary_target = str(graduate_ids[0])
+            secondary_targets = graduate_ids[1:]
+        
+        # Update the primary milestone assignment
+        update_data["graduate_id"] = primary_target
 
         supabase.table("milestones").update(update_data).eq("id", milestone_id).execute()
 
-        # 2. Handle Tasks
+        # 2. Handle Tasks for the Primary Milestone
         # Get existing tasks from DB
         existing_tasks_res = supabase.table("tasks").select("id").eq("milestone_id", milestone_id).execute()
         existing_ids = {t["id"] for t in existing_tasks_res.data} if existing_tasks_res.data else set()
@@ -277,6 +283,13 @@ def update_milestone_with_tasks(milestone_id: str, title: str, week_label: str, 
         if tasks_to_upsert:
             print(f"Upserting tasks: {len(tasks_to_upsert)}")
             supabase.table("tasks").upsert(tasks_to_upsert).execute()
+
+        # 3. Handle Secondary Targets (Create Copies)
+        if secondary_targets:
+            print(f"Creating copies for {len(secondary_targets)} secondary targets")
+            # Extract task names
+            task_names = [t["name"] for t in tasks]
+            create_milestone_with_tasks(title, week_label, task_names, secondary_targets)
 
         return {"status": "success"}
 

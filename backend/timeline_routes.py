@@ -59,13 +59,20 @@ class UpdateMilestoneRequest(BaseModel):
     week_label: str
     tasks: list[TaskItem]
     graduate_id: UUID | None = None
+    graduate_ids: list[UUID] | None = None
 
 @router.put("/milestone/{milestone_id}")
 def update_milestone(milestone_id: str, payload: UpdateMilestoneRequest):
     try:
         # Convert Pydantic models to dicts for the service
         tasks_dicts = [t.dict() for t in payload.tasks]
-        return update_milestone_with_tasks(milestone_id, payload.title, payload.week_label, tasks_dicts, payload.graduate_id)
+        
+        # Prioritize graduate_ids, fallback to graduate_id if present
+        ids = payload.graduate_ids
+        if ids is None and payload.graduate_id:
+            ids = [payload.graduate_id]
+            
+        return update_milestone_with_tasks(milestone_id, payload.title, payload.week_label, tasks_dicts, ids)
     except Exception as e:
         print(f"API Error updating milestone: {e}")
         raise HTTPException(status_code=500, detail=str(e))
