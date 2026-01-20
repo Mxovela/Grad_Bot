@@ -17,6 +17,7 @@ import { useLoading } from '../components/ui/loading';
 export function StudentDashboard() {
 
   const [firstName, setFirstName] = useState<string | null>(null);
+  const [progressData, setProgressData] = useState({ total: 0, completed: 0, percentage: 0 });
   const { setLoading } = useLoading();
 
   useEffect(() => {
@@ -40,6 +41,36 @@ export function StudentDashboard() {
         const f = data.first_name || data.given_name || data.firstName || data.first || (data.name ? data.name.split(' ')[0] : null);
 
         if (f) setFirstName(f);
+
+        // Fetch milestones for progress
+        if (data.id) {
+          const milestonesRes = await fetch(
+            `http://127.0.0.1:8000/timeline/${data.id}/milestones-tasks`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          
+          if (milestonesRes.ok) {
+            const milestonesData = await milestonesRes.json();
+            const overallProgress = milestonesData.reduce((acc: any, milestone: any) => {
+              if (!milestone.tasks) return acc;
+              const completed = milestone.tasks.filter((t: any) => t.completed).length;
+              return {
+                total: acc.total + milestone.tasks.length,
+                completed: acc.completed + completed
+              };
+            }, { total: 0, completed: 0 });
+
+            const percentage = overallProgress.total > 0 
+              ? Math.round((overallProgress.completed / overallProgress.total) * 100) 
+              : 0;
+              
+            setProgressData({
+              total: overallProgress.total,
+              completed: overallProgress.completed,
+              percentage: percentage
+            });
+          }
+        }
       } catch {
         // ignore errors silently
       }
@@ -179,7 +210,7 @@ export function StudentDashboard() {
             </div>
           </div>
           <p className="text-gray-600 text-sm mb-1">Programme Progress</p>
-          <p className="text-gray-900 mb-2">25%</p>
+          <p className="text-gray-900 mb-2">{progressData.percentage}%</p>
           <p className="text-sm text-gray-500">Day 15 of 60</p>
         </Card>
 
@@ -190,8 +221,8 @@ export function StudentDashboard() {
             </div>
           </div>
           <p className="text-gray-600 text-sm mb-1">Tasks Completed</p>
-          <p className="text-gray-900 mb-2">12/16</p>
-          <p className="text-sm text-green-600">75% complete</p>
+          <p className="text-gray-900 mb-2">{progressData.completed}/{progressData.total}</p>
+          <p className="text-sm text-green-600">{progressData.percentage}% complete</p>
         </Card>
       </div>
 

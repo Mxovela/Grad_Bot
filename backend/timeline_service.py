@@ -40,7 +40,7 @@ async def get_graduate_milestones_with_tasks(graduate_id):
                 if is_completed:
                     completed_count += 1
                 formatted_tasks.append({
-                    "id": t["id"],
+                    "task_id": t["id"],
                     "name": t["name"],
                     "completed": is_completed,
                     "display_order": t["display_order"]
@@ -62,6 +62,7 @@ async def get_graduate_milestones_with_tasks(graduate_id):
                 "title": milestone["title"],
                 "week_label": milestone["week_label"],
                 "status": status,
+                "admin_status": milestone.get("status"), # Pass admin status
                 "created_at": milestone.get("created_at"),
                 "tasks": formatted_tasks
             })
@@ -73,38 +74,36 @@ async def get_graduate_milestones_with_tasks(graduate_id):
         return []
 
 def complete_task(graduate_id: UUID, task_id: UUID):
-    response = (
-        supabase.rpc(
-            "complete_task",
-            {
-                "p_graduate_id": str(graduate_id),
-                "p_task_id": str(task_id),
-            },
-        )
-        .execute()
-    )
-
-    if response.data is None and response.error:
-        raise Exception(response.error.message)
-
-    return {"status": "success"}
+    try:
+        # 1. Try to update existing record
+        res = supabase.table("task_progress").update({
+            "completed": True,
+            "completed_at": datetime.utcnow().isoformat()
+        }).eq("graduate_id", str(graduate_id)).eq("task_id", str(task_id)).execute()
+        
+        # 2. If no record updated (list is empty), insert new one
+        if not res.data:
+            data = {
+                "graduate_id": str(graduate_id),
+                "task_id": str(task_id),
+                "completed": True,
+                "completed_at": datetime.utcnow().isoformat()
+            }
+            supabase.table("task_progress").insert(data).execute()
+            
+        return {"status": "success"}
+    except Exception as e:
+        print(f"Error completing task: {e}")
+        raise e
 
 def uncomplete_task(graduate_id: UUID, task_id: UUID):
-    response = (
-        supabase.rpc(
-            "uncomplete_task",
-            {
-                "p_graduate_id": str(graduate_id),
-                "p_task_id": str(task_id),
-            },
-        )
-        .execute()
-    )
-
-    if response.data is None and response.error:
-        raise Exception(response.error.message)
-
-    return {"status": "success"}
+    try:
+        # Update completed to False
+        supabase.table("task_progress").update({"completed": False}).eq("graduate_id", str(graduate_id)).eq("task_id", str(task_id)).execute()
+        return {"status": "success"}
+    except Exception as e:
+        print(f"Error uncompleting task: {e}")
+        raise e
 
 import re
 

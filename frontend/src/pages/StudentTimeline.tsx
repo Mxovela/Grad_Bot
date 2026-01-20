@@ -272,6 +272,11 @@ export function StudentTimeline() {
                           {milestone.created_at && ` • Added ${new Date(milestone.created_at).toLocaleDateString()}`}
                         </p>
                         <h3 className="font-semibold" style={{ color: 'black' }}>{milestone.title}</h3>
+                        {milestone.admin_status === 'completed' && (
+                          <p className="text-xs text-green-600 font-medium mt-1">
+                            Marked as Done by Admin
+                          </p>
+                        )}
                       </div>
 
                       {milestone.status === 'Completed' && (
