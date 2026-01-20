@@ -3,7 +3,6 @@ import uuid
 from dotenv import load_dotenv
 from supabase import create_client, Client
 
-
 load_dotenv()
 
 url: str = os.getenv("SUPABASE_URL")
@@ -56,6 +55,3 @@ def uncomplete_task(graduate_id: UUID, task_id: UUID):
         raise Exception(response.error.message)
 
     return {"status": "success"}
-
-def milestone_due_date(programme_start, ending_week):
-    return programme_start + timedelta(days=((ending_week - 1) * 7) + 4)
