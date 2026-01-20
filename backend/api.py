@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from auth_routes import router as auth_router
 # 🔹 Import your core logic
-from main import ask_grad_question
+from cloudvector import chat
 from document_routes import router as document_router
 from category_routes import router as category_router
 from user_routes import router as user_router
@@ -66,7 +66,7 @@ async def ask_question(request: QuestionRequest):
     
     print("Received question:", request.question)
     try:
-        result = ask_grad_question(request.question)
+        result = chat(request.question)
 
        
 
