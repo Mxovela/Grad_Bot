@@ -222,6 +222,7 @@ def get_all_graduates():
                     "email": user["email"],
                     "phone": user["phone"],
                     "progress": calculate_graduate_progress(user_id),
+                    "archived": grad_row.get("archived", False),
                 }
                 graduates.append(grad)
             except Exception as inner_e:
@@ -231,6 +232,19 @@ def get_all_graduates():
         return graduates
     except Exception as e:
         print(f"Error in get_all_graduates: {e}")
+        raise e
+
+def set_graduate_archived_status(user_id: str, archived: bool):
+    try:
+        response = (
+            supabase.table("graduates")
+            .update({"archived": archived})
+            .eq("id", user_id)
+            .execute()
+        )
+        return response.data
+    except Exception as e:
+        print(f"Error setting archive status: {e}")
         raise e
  
 def new_user(email, role, first_name, last_name, password, phone=""):

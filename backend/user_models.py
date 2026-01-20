@@ -41,6 +41,7 @@ class GraduateResponse(BaseModel):
     email: str
     phone: str | None
     progress: int | None = None
+    archived: bool = False
 
 
 class GraduateUpdateRequest(BaseModel):
