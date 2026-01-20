@@ -10,7 +10,8 @@ import { useLoading } from '../components/ui/loading';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Label } from '../components/ui/label';
 import { Checkbox } from '../components/ui/checkbox';
-import { Search, MoreVertical, UserCircle2, AlertCircle, Plus } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { Search, MoreVertical, UserCircle2, AlertCircle, Plus, Archive, RefreshCw } from 'lucide-react';
 
 type GraduateUser = {
   id: string | number;
@@ -20,9 +21,11 @@ type GraduateUser = {
   email: string;
   phone: string;
   progress?: string | number | null;
+  archived?: boolean;
 };
 
 export function AdminUserManagement() {
+  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<GraduateUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -67,6 +70,7 @@ export function AdminUserManagement() {
           email: it?.email ?? '',
           phone: it?.phone ?? it?.phone_number ?? '',
           progress: it?.progress ?? null,
+          archived: it?.archived ?? false,
         }));
         setUsers(mapped);
         setSelectedUserIds([]);
@@ -97,6 +101,10 @@ export function AdminUserManagement() {
   }, [loadingUsers, setLoading]);
 
   const filteredUsers = users.filter((user) => {
+    const isArchived = user.archived === true;
+    if (activeTab === 'active' && isArchived) return false;
+    if (activeTab === 'archived' && !isArchived) return false;
+
     const query = searchQuery.toLowerCase();
     const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
     return (
@@ -106,6 +114,22 @@ export function AdminUserManagement() {
       user.phone.toLowerCase().includes(query)
     );
   });
+
+  const handleArchive = async (id: string | number, archive: boolean) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/graduates/${id}/archive?archived=${archive}`, {
+        method: 'PATCH',
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await fetchUsers();
+      setOpenMenuUserId(null);
+    } catch (err: any) {
+      setUsersError(err?.message ?? `Failed to ${archive ? 'archive' : 'unarchive'} user`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDelete = async (id: string | number) => {
     setLoading(true);
@@ -262,6 +286,13 @@ export function AdminUserManagement() {
   return (
     <div className="pt-8 space-y-8">
       <Card className="p-6 border-gray-200">
+        <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'active' | 'archived')} className="w-full mb-6">
+          <TabsList className="grid w-[400px] grid-cols-2">
+            <TabsTrigger value="active">Active Graduates</TabsTrigger>
+            <TabsTrigger value="archived">Archived Graduates</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
         <div className="flex items-center gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -467,6 +498,22 @@ export function AdminUserManagement() {
                                 onClick={() => openEditModal(user)}
                               >
                                 Edit
+                              </button>
+                              <button
+                                className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
+                                type="button"
+                                style={{ color: '#000000' }}
+                                onClick={() => handleArchive(user.id, !user.archived)}
+                              >
+                                {user.archived ? (
+                                  <span className="flex items-center gap-2">
+                                    <RefreshCw className="w-4 h-4" /> Unarchive
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-2">
+                                    <Archive className="w-4 h-4" /> Archive
+                                  </span>
+                                )}
                               </button>
                               <button
                                 className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"

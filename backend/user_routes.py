@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from userdatabase import get_all_graduates, delete_user, update_graduate_basic
+from userdatabase import get_all_graduates, delete_user, update_graduate_basic, set_graduate_archived_status
 from user_models import GraduateResponse, GraduateUpdateRequest
 
 router = APIRouter(prefix="/graduates", tags=["Graduates"])
@@ -32,5 +32,13 @@ async def update_graduate_endpoint(user_id: str, request: GraduateUpdateRequest)
         return updated
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.patch("/{user_id}/archive")
+async def archive_graduate_endpoint(user_id: str, archived: bool):
+    try:
+        set_graduate_archived_status(user_id.strip(), archived)
+        return {"status": "success", "id": user_id, "archived": archived}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
