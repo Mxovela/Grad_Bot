@@ -5,7 +5,7 @@ from uuid import UUID
 import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
-
+from datetime import datetime, timedelta, timezone
 load_dotenv()
 
 url: str = os.getenv("SUPABASE_URL")
@@ -131,3 +131,36 @@ def list_documents():
         .execute()
 
     return result.data
+
+@router.get("/total-document-count")
+def document_stats():
+    try:
+        # 1️⃣ Get total document count
+        total_resp = supabase.table("documents") \
+            .select("id", count="exact") \
+            .execute()
+
+        total_documents = total_resp.count or 0
+
+        # 2️⃣ Calculate start of current week (Monday)
+        now = datetime.now(timezone.utc)
+        start_of_week = now - timedelta(days=now.weekday())
+        start_of_week = start_of_week.replace(
+            hour=0, minute=0, second=0, microsecond=0
+        )
+
+        # 3️⃣ Get documents created this week
+        week_resp = supabase.table("documents") \
+            .select("id", count="exact") \
+            .gte("created_at", start_of_week.isoformat()) \
+            .execute()
+
+        documents_this_week = week_resp.count or 0
+
+        return {
+            "total_documents": total_documents,
+            "documents_this_week": documents_this_week
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

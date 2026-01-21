@@ -2787,3 +2787,13 @@ html {
   40% { transform: scale(1); }
 }
 
+.gb-spinner {
+  animation: gb-spin 0.8s linear infinite;
+}
+
+@keyframes gb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+

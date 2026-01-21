@@ -2,7 +2,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from uuid import UUID
-from timeline_service import complete_task, get_graduate_milestones_with_tasks, uncomplete_task, get_all_milestones, create_milestone_with_tasks, delete_milestone, delete_all_milestones, update_milestone_status, update_milestone_with_tasks
+from timeline_service import complete_task, get_graduate_milestones_with_tasks, uncomplete_task, get_all_milestones, create_milestone_with_tasks, delete_milestone, delete_all_milestones, update_milestone_status, update_milestone_with_tasks,get_next_three_active_milestones
 
 router = APIRouter(prefix="/timeline", tags=["Timeline"])
 
@@ -102,3 +102,8 @@ def complete(payload: TaskUpdate):
 @router.post("/tasks/uncomplete")
 def uncomplete(payload: TaskUpdate):
     return uncomplete_task(payload.graduate_id, payload.task_id)
+
+@router.get("/get-3-active-milestones/{graduate_id}")
+def get_3_active_milestones(graduate_id :UUID):
+    return get_next_three_active_milestones(graduate_id)
+

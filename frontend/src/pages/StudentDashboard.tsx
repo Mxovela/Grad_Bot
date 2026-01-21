@@ -1,3 +1,4 @@
+import React from 'react';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { 
@@ -7,7 +8,8 @@ import {
   TrendingUp,
   ArrowRight,
   CheckCircle2,
-  Clock
+  Clock,
+  Loader2,
 } from 'lucide-react';
 import { Progress } from '../components/ui/progress';
 import { Link } from 'react-router';
@@ -17,6 +19,7 @@ import { useLoading } from '../components/ui/loading';
 export function StudentDashboard() {
 
   const [firstName, setFirstName] = useState<string | null>(null);
+  const [upcomingMilestones, setUpcomingMilestones] = useState<any[]>([]);
   const [progressData, setProgressData] = useState({ 
     total: 0, 
     completed: 0, 
@@ -24,6 +27,7 @@ export function StudentDashboard() {
     totalMilestones: 0,
     completedMilestones: 0
   });
+  const [statsLoading, setStatsLoading] = useState(true);
   const { setLoading } = useLoading();
 
   useEffect(() => {
@@ -81,9 +85,50 @@ export function StudentDashboard() {
               completedMilestones
             });
           }
+
+          // Fetch top 3 active/upcoming milestones
+          try {
+            const upcomingRes = await fetch(
+              `http://127.0.0.1:8000/timeline/get-3-active-milestones/${data.id}`,
+              {
+                method: 'GET',
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+                },
+              }
+            );
+
+            if (upcomingRes.ok) {
+              const milestones = await upcomingRes.json();
+              if (Array.isArray(milestones)) {
+                const mapped = milestones.map((m: any) => {
+                  const rawStatus = m.status || 'Upcoming';
+                  const isInProgress = /progress/i.test(String(rawStatus));
+
+                  return {
+                    title: m.title || m.name || m.milestone_title || 'Untitled milestone',
+                    dueDate: m.due_date || m.dueDate || m.deadline || 'No date',
+                    status: rawStatus,
+                    isInProgress,
+                    progress:
+                      m.progress ??
+                      m.completion_percent ??
+                      m.completionPercentage ??
+                      0,
+                  };
+                });
+                setUpcomingMilestones(mapped);
+              }
+            }
+          } catch {
+            // ignore fetch errors for upcoming milestones
+          }
         }
       } catch {
         // ignore errors silently
+      } finally {
+        setStatsLoading(false);
       }
     })();
   }, []);
@@ -120,11 +165,6 @@ export function StudentDashboard() {
     }
   };
 
-  const upcomingMilestones = [
-    { title: 'Complete onboarding modules', dueDate: 'Dec 15, 2024', status: 'in-progress', progress: 75 },
-    { title: 'First 1-on-1 with manager', dueDate: 'Dec 10, 2024', status: 'upcoming', progress: 0 },
-    { title: 'Submit learning plan', dueDate: 'Dec 20, 2024', status: 'upcoming', progress: 0 },
-  ];
   const [recentResources, setRecentResources] = useState<any[]>([
     { title: 'Graduate Handbook 2025', type: 'PDF', views: 245 },
     { title: 'Technical Training Guide', type: 'PDF', views: 189 },
@@ -199,8 +239,20 @@ export function StudentDashboard() {
             </div>
           </div>
           <p className="text-gray-600 text-sm mb-1">Questions Asked</p>
-          <p className="text-gray-900 mb-2">47</p>
-          <p className="text-sm text-green-600">+5 this week</p>
+          <p className="text-gray-900 mb-2">
+            {statsLoading ? (
+              <Loader2 className="w-4 h-4 text-gray-400 gb-spinner" />
+            ) : (
+              47
+            )}
+          </p>
+          <p className="text-sm text-green-600">
+            {statsLoading ? (
+              <Loader2 className="w-3 h-3 text-green-400 gb-spinner" />
+            ) : (
+              '+5 this week'
+            )}
+          </p>
         </Card>
 
         <Card className="p-6 border-gray-200">
@@ -210,8 +262,20 @@ export function StudentDashboard() {
             </div>
           </div>
           <p className="text-gray-600 text-sm mb-1">Resources Viewed</p>
-          <p className="text-gray-900 mb-2">28</p>
-          <p className="text-sm text-green-600">+3 this week</p>
+          <p className="text-gray-900 mb-2">
+            {statsLoading ? (
+              <Loader2 className="w-4 h-4 text-gray-400 gb-spinner" />
+            ) : (
+              28
+            )}
+          </p>
+          <p className="text-sm text-green-600">
+            {statsLoading ? (
+              <Loader2 className="w-3 h-3 text-green-400 gb-spinner" />
+            ) : (
+              '+3 this week'
+            )}
+          </p>
         </Card>
 
         <Card className="p-6 border-gray-200">
@@ -221,8 +285,20 @@ export function StudentDashboard() {
             </div>
           </div>
           <p className="text-gray-600 text-sm mb-1">Programme Progress</p>
-          <p className="text-gray-900 mb-2">{progressData.percentage}%</p>
-          <p className="text-sm text-green-600">{progressData.completedMilestones}/{progressData.totalMilestones} Milestones</p>
+          <p className="text-gray-900 mb-2">
+            {statsLoading ? (
+              <Loader2 className="w-4 h-4 text-gray-400 gb-spinner" />
+            ) : (
+              `${progressData.percentage}%`
+            )}
+          </p>
+          <p className="text-sm text-green-600">
+            {statsLoading ? (
+              <Loader2 className="w-3 h-3 text-green-400 gb-spinner" />
+            ) : (
+              `${progressData.completedMilestones}/${progressData.totalMilestones} Milestones`
+            )}
+          </p>
         </Card>
 
         <Card className="p-6 border-gray-200">
@@ -232,8 +308,20 @@ export function StudentDashboard() {
             </div>
           </div>
           <p className="text-gray-600 text-sm mb-1">Tasks Completed</p>
-          <p className="text-gray-900 mb-2">{progressData.completed}/{progressData.total}</p>
-          <p className="text-sm text-green-600">{progressData.percentage}% complete</p>
+          <p className="text-gray-900 mb-2">
+            {statsLoading ? (
+              <Loader2 className="w-4 h-4 text-gray-400 gb-spinner" />
+            ) : (
+              `${progressData.completed}/${progressData.total}`
+            )}
+          </p>
+          <p className="text-sm text-green-600">
+            {statsLoading ? (
+              <Loader2 className="w-3 h-3 text-green-400 gb-spinner" />
+            ) : (
+              `${progressData.percentage}% complete`
+            )}
+          </p>
         </Card>
       </div>
 
@@ -250,34 +338,38 @@ export function StudentDashboard() {
             </Link>
           </div>
           <div className="space-y-4">
-            {upcomingMilestones.map((milestone, index) => (
-              <div key={index} className="p-4 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <p className="text-gray-900 text-sm mb-1">{milestone.title}</p>
-                    <p className="text-gray-500 text-xs flex items-center gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {milestone.dueDate}
-                    </p>
+            {upcomingMilestones.length === 0 ? (
+              <p className="text-sm text-gray-500">No upcoming milestones found.</p>
+            ) : (
+              upcomingMilestones.map((milestone, index) => (
+                <div key={index} className="p-4 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <p className="text-gray-900 text-sm mb-1">{milestone.title}</p>
+                      <p className="text-gray-500 text-xs flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {milestone.dueDate}
+                      </p>
+                    </div>
+                    {milestone.isInProgress ? (
+                      <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-lg">
+                        In Progress
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded-lg">
+                        Upcoming
+                      </span>
+                    )}
                   </div>
-                  {milestone.status === 'in-progress' ? (
-                    <span className="text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded-lg">
-                      In Progress
-                    </span>
-                  ) : (
-                    <span className="text-xs text-gray-600 bg-gray-50 px-2 py-1 rounded-lg">
-                      Upcoming
-                    </span>
+                  {milestone.progress > 0 && (
+                    <div className="space-y-1">
+                      <Progress value={milestone.progress} className="h-2" />
+                      <p className="text-xs text-gray-500">{milestone.progress}% complete</p>
+                    </div>
                   )}
                 </div>
-                {milestone.progress > 0 && (
-                  <div className="space-y-1">
-                    <Progress value={milestone.progress} className="h-2" />
-                    <p className="text-xs text-gray-500">{milestone.progress}% complete</p>
-                  </div>
-                )}
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </Card>
 
