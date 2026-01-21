@@ -526,10 +526,10 @@ export function AdminTaskManagement() {
           <div className="grid gap-2 relative">
             <Label>Assign to Graduates</Label>
             <div 
-              className="border rounded-md p-2 cursor-pointer bg-white flex justify-between items-center"
+              className="border rounded-md p-2 cursor-pointer !bg-white flex justify-between items-center"
               onClick={() => setIsGraduateDropdownOpen(!isGraduateDropdownOpen)}
             >
-              <span className="text-sm text-black">
+              <span className="text-sm !text-black">
                 {newMilestone.graduate_ids.length === 0 
                   ? "Select Graduates (Optional)" 
                   : `${newMilestone.graduate_ids.length} Graduate(s) Selected`}
@@ -538,9 +538,9 @@ export function AdminTaskManagement() {
             </div>
 
             {isGraduateDropdownOpen && (
-              <div className="absolute top-[75px] left-0 right-0 z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto p-2">
+              <div className="absolute top-[75px] left-0 right-0 z-50 !bg-black border !border-gray-700 rounded-md shadow-lg max-h-60 overflow-y-auto p-2" style={{ backgroundColor: 'black' }}>
                 <div 
-                  className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer"
+                  className="flex items-center gap-2 p-2 hover:!bg-gray-800 rounded cursor-pointer"
                   onClick={() => {
                     if (newMilestone.graduate_ids.length === graduates.length) {
                         setNewMilestone({...newMilestone, graduate_ids: []});
@@ -555,13 +555,13 @@ export function AdminTaskManagement() {
                         readOnly
                         className="pointer-events-none"
                     />
-                    <span className="text-sm font-semibold text-black">Select All</span>
+                    <span className="text-sm font-semibold !text-black">Select All</span>
                 </div>
                 <hr className="my-1 border-gray-200" />
                 {graduates.map((grad) => (
                   <div 
                     key={grad.id} 
-                    className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer"
+                    className="flex items-center gap-2 p-2 hover:!bg-gray-100 rounded cursor-pointer"
                     onClick={() => {
                         const ids = newMilestone.graduate_ids.includes(grad.id)
                             ? newMilestone.graduate_ids.filter(id => id !== grad.id)
@@ -575,7 +575,7 @@ export function AdminTaskManagement() {
                       readOnly
                       className="pointer-events-none"
                     />
-                    <span className="text-sm text-black">{grad.first_name} {grad.last_name}</span>
+                    <span className="text-sm !text-black">{grad.first_name} {grad.last_name}</span>
                   </div>
                 ))}
               </div>
@@ -670,10 +670,11 @@ export function AdminTaskManagement() {
             <div className="grid gap-2 relative">
               <Label>Assign to Graduates</Label>
               <div 
-                className="border rounded-md p-2 cursor-pointer bg-white flex justify-between items-center"
+                className="border rounded-md p-2 cursor-pointer !bg-black flex justify-between items-center"
+                style={{ backgroundColor: 'black', borderColor: '#374151' }}
                 onClick={() => setIsEditGraduateDropdownOpen(!isEditGraduateDropdownOpen)}
               >
-                <span className="text-sm text-black">
+                <span className="text-sm !text-white">
                   {editingMilestone.graduate_ids.length === 0 
                     ? "Select Graduates (Optional)" 
                     : `${editingMilestone.graduate_ids.length} Graduate(s) Selected`}
@@ -682,9 +683,9 @@ export function AdminTaskManagement() {
               </div>
 
               {isEditGraduateDropdownOpen && (
-                <div className="absolute top-[75px] left-0 right-0 z-50 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-y-auto p-2">
+                <div className="absolute top-[75px] left-0 right-0 z-50 !bg-black border !border-gray-700 rounded-md shadow-lg max-h-60 overflow-y-auto p-2" style={{ backgroundColor: 'black' }}>
                   <div 
-                    className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer"
+                    className="flex items-center gap-2 p-2 hover:!bg-gray-800 rounded cursor-pointer"
                     onClick={() => {
                       if (editingMilestone.graduate_ids.length === graduates.length) {
                           setEditingMilestone({...editingMilestone, graduate_ids: []});
@@ -699,13 +700,13 @@ export function AdminTaskManagement() {
                           readOnly
                           className="pointer-events-none"
                       />
-                      <span className="text-sm font-semibold text-black">Select All</span>
+                      <span className="text-sm font-semibold !text-white">Select All</span>
                   </div>
-                  <hr className="my-1 border-gray-200" />
+                  <hr className="my-1 border-gray-700" />
                   {graduates.map((grad) => (
                     <div 
                       key={grad.id} 
-                      className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer"
+                      className="flex items-center gap-2 p-2 hover:!bg-gray-800 rounded cursor-pointer"
                       onClick={() => {
                           const ids = editingMilestone.graduate_ids.includes(grad.id)
                               ? editingMilestone.graduate_ids.filter(id => id !== grad.id)
@@ -719,7 +720,7 @@ export function AdminTaskManagement() {
                         readOnly
                         className="pointer-events-none"
                       />
-                      <span className="text-sm text-black">{grad.first_name} {grad.last_name}</span>
+                      <span className="text-sm !text-white">{grad.first_name} {grad.last_name}</span>
                     </div>
                   ))}
                 </div>

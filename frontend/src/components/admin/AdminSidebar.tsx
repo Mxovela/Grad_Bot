@@ -1,5 +1,6 @@
 import { LayoutDashboard, FileText, BarChart3, Settings, MessageSquare, Users, CheckSquare } from 'lucide-react';
 import { Link, useLocation } from 'react-router';
+import logo from '../../assets/logo.png';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
@@ -25,8 +26,11 @@ export function AdminSidebar() {
     >
       <div className="p-6">
         <div className="flex items-center gap-2 mb-8">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-teal-500" />
-          <span>Grad Knowledge</span>
+          <img 
+            src={logo} 
+            alt="Datacentrix Logo" 
+            className="h-8 w-auto dark:drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]"
+          />
         </div>
 
         <nav className="space-y-1">
