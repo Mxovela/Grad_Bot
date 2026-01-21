@@ -1,5 +1,5 @@
 import { Button } from '../ui/button';
-import { Bell, LogOut, Moon, Sun, LayoutDashboard, FileText, BarChart3, Settings, MessageSquare, Users, CheckSquare } from 'lucide-react';
+import { LogOut, Moon, Sun, LayoutDashboard, FileText, BarChart3, Settings, MessageSquare, Users, CheckSquare } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router';
 import { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
@@ -54,14 +54,6 @@ export function AdminHeader() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell 
-              className="w-5 h-5"
-              style={{ color: 'var(--muted-foreground)' }}
-            />
-            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" />
-          </Button>
-
           <Button
             variant="ghost"
             size="icon"

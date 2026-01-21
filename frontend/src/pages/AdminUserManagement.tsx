@@ -101,10 +101,6 @@ export function AdminUserManagement() {
   }, [loadingUsers, setLoading]);
 
   const filteredUsers = users.filter((user) => {
-    const isArchived = user.archived === true;
-    if (activeTab === 'active' && isArchived) return false;
-    if (activeTab === 'archived' && !isArchived) return false;
-
     const query = searchQuery.toLowerCase();
     const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
     return (
@@ -115,21 +111,7 @@ export function AdminUserManagement() {
     );
   });
 
-  const handleArchive = async (id: string | number, archive: boolean) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`http://127.0.0.1:8000/graduates/${id}/archive?archived=${archive}`, {
-        method: 'PATCH',
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      await fetchUsers();
-      setOpenMenuUserId(null);
-    } catch (err: any) {
-      setUsersError(err?.message ?? `Failed to ${archive ? 'archive' : 'unarchive'} user`);
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const handleDelete = async (id: string | number) => {
     setLoading(true);
@@ -141,6 +123,25 @@ export function AdminUserManagement() {
       await fetchUsers();
     } catch (err: any) {
       setUsersError(err?.message ?? 'Failed to delete user');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleArchive = async (id: string | number, archived: boolean) => {
+    setLoading(true);
+    try {
+      const res = await fetch(`http://127.0.0.1:8000/graduates/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ archived }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await fetchUsers();
+    } catch (err: any) {
+      setUsersError(err?.message ?? 'Failed to update user');
     } finally {
       setLoading(false);
     }

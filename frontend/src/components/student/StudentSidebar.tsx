@@ -1,5 +1,7 @@
 import { MessageSquare, User, BookOpen, Calendar, FileText, Home } from 'lucide-react';
 import { Link, useLocation } from 'react-router';
+import logo from '../../assets/logo.png';
+import { useStudentNotifications } from '../../context/StudentNotificationContext';
 
 const navItems = [
   { icon: Home, label: 'Dashboard', path: '/student' },
@@ -12,6 +14,19 @@ const navItems = [
 
 export function StudentSidebar() {
   const location = useLocation();
+  const { hasNewMilestone, hasNewDocument, hasNewResource, markAsViewed } = useStudentNotifications();
+
+  const handleLinkClick = (path: string) => {
+    if (path === '/student/timeline' && hasNewMilestone) {
+      markAsViewed('milestone');
+    }
+    if (path === '/student/documents' && hasNewDocument) {
+      markAsViewed('document');
+    }
+    if (path === '/student/resources' && hasNewResource) {
+      markAsViewed('resource');
+    }
+  };
 
   return (
     <aside 
@@ -24,8 +39,11 @@ export function StudentSidebar() {
     >
       <div className="p-6">
         <div className="flex items-center gap-2 mb-8">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-teal-500" />
-          <span>Graduate Portal</span>
+          <img 
+            src={logo} 
+            alt="Datacentrix Logo" 
+            className="h-8 w-auto dark:drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]"
+          />
         </div>
 
         <nav className="space-y-1">
@@ -33,10 +51,16 @@ export function StudentSidebar() {
             const Icon = item.icon;
             const isActive = location.pathname === item.path;
             
+            const showDot = 
+              (item.path === '/student/timeline' && hasNewMilestone) ||
+              (item.path === '/student/documents' && hasNewDocument) ||
+              (item.path === '/student/resources' && hasNewResource);
+
             return (
               <Link
                 key={item.path}
                 to={item.path}
+                onClick={() => handleLinkClick(item.path)}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
                 style={{
                   backgroundColor: isActive ? undefined : 'transparent',
@@ -56,8 +80,18 @@ export function StudentSidebar() {
                   }
                 }}
               >
-                <Icon className="w-5 h-5" />
-                <span>{item.label}</span>
+                <div className="relative">
+                  <Icon className="w-5 h-5" />
+                  {showDot && (
+                    <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-blue-500 rounded-full border-2 border-[var(--background)]" />
+                  )}
+                </div>
+                <div className="flex items-center justify-between flex-1">
+                  <span>{item.label}</span>
+                  {showDot && (
+                    <span className="w-2 h-2 bg-blue-500 rounded-full" />
+                  )}
+                </div>
               </Link>
             );
           })}
