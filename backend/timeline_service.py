@@ -343,3 +343,93 @@ def calculate_graduate_progress(graduate_id: str) -> int:
     except Exception as e:
         print(f"Error calculating progress for {graduate_id}: {e}")
         return 0
+
+def get_next_three_active_milestones(graduate_id: UUID):
+    """
+    Return up to 3 milestones that are still Upcoming or In-Progress for this graduate.
+    No direct graduate->milestone link; we infer status via task_progress and
+    also return a progress percentage per milestone.
+    """
+    try:
+        # All milestones ordered for consistent slicing
+        milestones = (
+            supabase.table("milestones")
+            .select("*")
+            .order("display_order")
+            .execute()
+            .data
+        )
+        if not milestones:
+            return []
+
+        # All tasks (used to map task_progress -> milestones)
+        tasks_res = (
+            supabase.table("tasks")
+            .select("id, milestone_id, name, display_order")
+            .order("display_order")
+            .execute()
+        )
+        tasks = tasks_res.data if tasks_res and tasks_res.data else []
+        if not tasks:
+            return []
+
+        # Completed tasks for this graduate
+        progress_res = (
+            supabase.table("task_progress")
+            .select("task_id, completed")
+            .eq("graduate_id", str(graduate_id))
+            .eq("completed", True)
+            .execute()
+        )
+        completed_task_ids = {item["task_id"] for item in progress_res.data} if progress_res and progress_res.data else set()
+
+        results = []
+        for m in milestones:
+            m_tasks = [t for t in tasks if t["milestone_id"] == m["id"]]
+
+            if not m_tasks:
+                # Milestone without tasks is treated as upcoming with 0% progress
+                status = "Upcoming"
+                formatted_tasks = []
+                progress_pct = 0
+            else:
+                completed_count = sum(1 for t in m_tasks if t["id"] in completed_task_ids)
+                total_count = len(m_tasks)
+                progress_pct = int((completed_count / total_count) * 100) if total_count > 0 else 0
+
+                formatted_tasks = [
+                    {
+                        "task_id": t["id"],
+                        "name": t["name"],
+                        "completed": t["id"] in completed_task_ids,
+                        "display_order": t.get("display_order"),
+                    }
+                    for t in m_tasks
+                ]
+                formatted_tasks.sort(key=lambda x: x["display_order"] or 0)
+
+                status = "Upcoming"
+                if completed_count == total_count:
+                    status = "Completed"
+                elif completed_count > 0:
+                    status = "In-Progress"
+
+            if status in ("Upcoming", "In-Progress"):
+                results.append({
+                    "milestone_id": m["id"],
+                    "title": m["title"],
+                    "week_label": m["week_label"],
+                    "status": status,
+                    "progress": progress_pct,  # 0–100
+                    "admin_status": m.get("status"),
+                    "created_at": m.get("created_at"),
+                    "tasks": formatted_tasks,
+                })
+
+            if len(results) == 3:
+                break
+
+        return results
+    except Exception as e:
+        print(f"Error fetching next milestones for {graduate_id}: {e}")
+        return []

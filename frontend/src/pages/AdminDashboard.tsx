@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -10,7 +10,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Clock,
-  MoreVertical
+  MoreVertical,
+  Loader2,
 } from 'lucide-react';
 import { Progress } from '../components/ui/progress';
 
@@ -19,12 +20,19 @@ export function AdminDashboard() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [recentDocuments, setRecentDocuments] = useState<Array<{ name: string; status: string; uploadedAt: string; chunks: number }>>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [documentStats, setDocumentStats] = useState<{
+    total_documents: number;
+    documents_this_week: number;
+  } | null>(null);
 
   const stats = [
     {
       label: 'Total Documents',
-      value: '247',
-      change: '+12 this week',
+      value: documentStats ? documentStats.total_documents.toString() : '—',
+      change: documentStats
+        ? `+${documentStats.documents_this_week} this week`
+        : '—',
       icon: FileText,
       color: 'from-blue-500 to-blue-600',
     },
@@ -50,7 +58,26 @@ export function AdminDashboard() {
       color: 'from-green-500 to-green-600',
     },
   ];
-
+  useEffect(() => {
+    const fetchDocumentStats = async () => {
+      setStatsLoading(true);
+      try {
+        const res = await fetch('http://127.0.0.1:8000/documents/total-document-count');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+  
+        setDocumentStats(data);
+      } catch (err) {
+        console.error('Failed to fetch document stats:', err);
+        setDocumentStats(null);
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+  
+    fetchDocumentStats();
+  }, []);
+  
   useEffect(() => {
     const fetchRecentDocuments = async () => {
       setLoadingDocuments(true);
@@ -73,6 +100,7 @@ export function AdminDashboard() {
         setRecentDocuments([]);
       } finally {
         setLoadingDocuments(false);
+        setStatsLoading(false);
       }
     };
 
@@ -114,8 +142,20 @@ export function AdminDashboard() {
                 </Button>
               </div>
               <p className="text-gray-600 text-sm mb-1">{stat.label}</p>
-              <p style={{ color: 'var(--foreground)' }} className="mb-2">{stat.value}</p>
-              <p className="text-sm text-green-600">{stat.change}</p>
+              <p style={{ color: 'var(--foreground)' }} className="mb-2">
+                {statsLoading ? (
+                  <Loader2 className="w-4 h-4 text-gray-400 gb-spinner" />
+                ) : (
+                  stat.value
+                )}
+              </p>
+              <p className="text-sm text-green-600">
+                {statsLoading ? (
+                  <Loader2 className="w-3 h-3 text-green-400 gb-spinner" />
+                ) : (
+                  stat.change
+                )}
+              </p>
             </Card>
           );
         })}
