@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 interface NotificationItem {
   id: string;
   type: 'milestone' | 'document' | 'resource';
+  subType?: 'new' | 'completed';
   title: string;
   created_at: string;
   path: string;
@@ -31,6 +32,9 @@ export function StudentNotificationProvider({ children }: { children: ReactNode 
   const [hasNewMilestone, setHasNewMilestone] = useState(false);
   const [hasNewDocument, setHasNewDocument] = useState(false);
   const [hasNewResource, setHasNewResource] = useState(false);
+
+  // Track currently completed milestones to update LS on view
+  const [currentCompletedMilestoneIds, setCurrentCompletedMilestoneIds] = useState<string[]>([]);
 
   const getMaxTime = (items: any[]) => {
     if (!items || items.length === 0) return 0;
@@ -69,24 +73,56 @@ export function StudentNotificationProvider({ children }: { children: ReactNode 
         mileTime = getMaxTime(milestones);
         setLatestMilestoneTime(mileTime);
 
-        const lastViewed = parseInt(localStorage.getItem(`grad_milestone_viewed_time_${currentGradId}`) || '0', 10);
-        if (mileTime > lastViewed) {
-          setHasNewMilestone(true);
-          // Add new milestones to list
-          milestones.forEach((m: any) => {
-             if (new Date(m.created_at).getTime() > lastViewed) {
-               newNotifications.push({
-                 id: m.id,
-                 type: 'milestone',
-                 title: m.title,
-                 created_at: m.created_at,
-                 path: '/student/timeline'
-               });
-             }
-          });
-        } else {
-          setHasNewMilestone(false);
+        // Track completed IDs for saving later
+        const completedIds = milestones
+          .filter((m: any) => m.admin_status === 'completed')
+          .map((m: any) => String(m.milestone_id));
+        setCurrentCompletedMilestoneIds(completedIds);
+
+        const lastViewedTime = parseInt(localStorage.getItem(`grad_milestone_viewed_time_${currentGradId}`) || '0', 10);
+        
+        // Get known completed IDs from LS
+        let knownCompletedIds: string[] = [];
+        try {
+          const stored = localStorage.getItem(`grad_known_completed_milestones_${currentGradId}`);
+          if (stored) {
+            knownCompletedIds = JSON.parse(stored);
+          }
+        } catch (e) {
+          console.error("Error parsing known completed milestones", e);
         }
+
+        let hasNew = false;
+
+        milestones.forEach((m: any) => {
+           // Check for New Creation
+           if (new Date(m.created_at).getTime() > lastViewedTime) {
+             hasNew = true;
+             newNotifications.push({
+               id: String(m.milestone_id),
+               type: 'milestone',
+               subType: 'new',
+               title: m.title,
+               created_at: m.created_at,
+               path: '/student/timeline'
+             });
+           }
+           // Check for Completion (Admin Status)
+            // If admin_status is completed AND we haven't seen it completed before
+            else if (m.admin_status === 'completed' && !knownCompletedIds.includes(String(m.milestone_id))) {
+              hasNew = true;
+              newNotifications.push({
+                id: String(m.milestone_id),
+                type: 'milestone',
+                subType: 'completed',
+                title: m.title,
+                created_at: new Date().toISOString(), // Use current time so it appears at the top
+                path: '/student/timeline'
+              });
+            }
+        });
+
+        setHasNewMilestone(hasNew);
       }
 
       // 3. Get Documents & Resources
@@ -106,6 +142,7 @@ export function StudentNotificationProvider({ children }: { children: ReactNode 
                newNotifications.push({
                  id: d.id,
                  type: 'document',
+                 subType: 'new',
                  title: d.file_name,
                  created_at: d.created_at,
                  path: '/student/documents'
@@ -119,30 +156,14 @@ export function StudentNotificationProvider({ children }: { children: ReactNode 
         const lastViewedRes = parseInt(localStorage.getItem(`grad_resource_viewed_time_${currentGradId}`) || '0', 10);
         if (docTime > lastViewedRes) {
           setHasNewResource(true);
-          // Duplicate check to avoid showing same doc twice if it's both new doc and resource? 
-          // The user treats them as separate tabs but same data source.
-          // We can add them as 'resource' type too if we want them in the list distinctively, 
-          // but usually it's the same file. 
-          // However, for the dropdown, maybe we just show "New Document: X". 
-          // But if we want to redirect to Resources tab, we might need a separate entry or just link to one.
-          // Let's stick to adding them as Documents mostly, but if we need to show Resources specifically...
-          // Actually, the request says "Resources - name of resource". 
-          // Since they are the same data, I'll just check if it's already in the list as document.
-          // But wait, the Sidebar has separate indicators.
-          // If I click Documents, it clears Document dot. Resources dot might remain?
-          // The logic in Sidebar was: check docTime against lastViewedDocTime AND lastViewedResTime separately.
-          // So if I viewed Documents, docTime <= lastViewedDocTime. But if I haven't viewed Resources, docTime > lastViewedResTime.
-          // So the "new item" is technically new to the "Resources" tab too.
-          // I will add it as 'resource' if it's new to resources.
-          
           docs.forEach((d: any) => {
             if (new Date(d.created_at).getTime() > lastViewedRes) {
-               // Check if we already added this as document
                const existing = newNotifications.find(n => n.id === d.id && n.type === 'document');
                if (!existing) {
                    newNotifications.push({
                      id: d.id,
                      type: 'resource',
+                     subType: 'new',
                      title: d.file_name,
                      created_at: d.created_at,
                      path: '/student/resources'
@@ -176,6 +197,17 @@ export function StudentNotificationProvider({ children }: { children: ReactNode 
     if (type === 'milestone') {
       setHasNewMilestone(false);
       localStorage.setItem(`grad_milestone_viewed_time_${graduateId}`, latestMilestoneTime.toString());
+      
+      // Merge currently completed IDs into known list
+      let knownCompletedIds: string[] = [];
+      try {
+        const stored = localStorage.getItem(`grad_known_completed_milestones_${graduateId}`);
+        if (stored) knownCompletedIds = JSON.parse(stored);
+      } catch (e) {}
+      
+      const updatedKnown = Array.from(new Set([...knownCompletedIds, ...currentCompletedMilestoneIds]));
+      localStorage.setItem(`grad_known_completed_milestones_${graduateId}`, JSON.stringify(updatedKnown));
+
       setNotifications(prev => prev.filter(n => n.type !== 'milestone'));
     } else if (type === 'document') {
       setHasNewDocument(false);
@@ -202,10 +234,10 @@ export function StudentNotificationProvider({ children }: { children: ReactNode 
   );
 }
 
-export function useStudentNotifications() {
+export const useStudentNotifications = () => {
   const context = useContext(StudentNotificationContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useStudentNotifications must be used within a StudentNotificationProvider');
   }
   return context;
-}
+};

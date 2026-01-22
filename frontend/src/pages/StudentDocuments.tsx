@@ -6,6 +6,7 @@ import { Button } from '../components/ui/button';
 import { FileText, Download, Eye, Calendar, Loader2 } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 import { useLoading } from '../components/ui/loading';
+import { useStudentNotifications } from '../context/StudentNotificationContext';
 
 interface Document {
   id: string;
@@ -24,6 +25,7 @@ export function StudentDocuments() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const { setLoading: setGlobalLoading } = useLoading();
+  const { markAsViewed } = useStudentNotifications();
   const [viewingDocId, setViewingDocId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -55,6 +57,7 @@ export function StudentDocuments() {
   const handleView = async (docId: string) => {
     try {
       setViewingDocId(docId);
+      markAsViewed('document');
       
       // Optimistic update
       setDocuments(prev => prev.map(doc => 

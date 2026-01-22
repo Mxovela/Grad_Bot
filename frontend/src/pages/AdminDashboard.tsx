@@ -137,9 +137,6 @@ export function AdminDashboard() {
                 <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center`}>
                   <Icon className="w-6 h-6 text-white" />
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreVertical className="w-4 h-4 text-gray-400" />
-                </Button>
               </div>
               <p className="text-gray-600 text-sm mb-1">{stat.label}</p>
               <p style={{ color: 'var(--foreground)' }} className="mb-2">
