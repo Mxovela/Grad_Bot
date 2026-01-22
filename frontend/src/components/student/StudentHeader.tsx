@@ -188,7 +188,8 @@ export function StudentHeader() {
                       onClick={() => handleNotificationClick(item)}
                     >
                       <div className="font-medium text-sm">
-                        {item.type === 'milestone' ? 'New Milestone' : 
+                        {item.subType === 'completed' ? 'Milestone Completed' :
+                         item.type === 'milestone' ? 'New Milestone' : 
                          item.type === 'resource' ? 'New Resource' : 'New Document'}
                       </div>
                       <div className="text-xs text-muted-foreground line-clamp-2">
