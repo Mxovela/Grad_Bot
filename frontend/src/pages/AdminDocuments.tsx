@@ -1,5 +1,6 @@
 import { useState, useEffect, SetStateAction } from 'react';
 import { useLocation } from 'react-router';
+import { useClickOutside } from '../hooks/use-click-outside';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -33,6 +34,68 @@ import {
 } from 'lucide-react';
 import { Badge } from '../components/ui/badge';
 import { useLoading } from '../components/ui/loading';
+
+function DocumentActionMenu({
+  doc,
+  isOpen,
+  onToggle,
+  onClose,
+  onDownload,
+  onDelete
+}: {
+  doc: { id: string | number; name: string };
+  isOpen: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  onDownload: (id: string | number, name: string) => void;
+  onDelete: (id: string | number, name: string) => void;
+}) {
+  const ref = useClickOutside<HTMLDivElement>(() => onClose(), isOpen);
+
+  return (
+    <div className="relative inline-block" ref={ref}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        title="More actions"
+        onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+        }}
+      >
+        <MoreVertical className="w-4 h-4 text-gray-600" />
+      </Button>
+      {isOpen && (
+        <div className="absolute right-0 top-0 mt-8 w-32 rounded-md border bg-white dark:bg-zinc-950 shadow-lg z-50">
+          <button
+            className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-2"
+            type="button"
+            style={{ color: 'var(--foreground)' }}
+            onClick={(e) => {
+                e.stopPropagation();
+                onDownload(doc.id, doc.name);
+                onClose();
+            }}
+          >
+            <Download className="w-4 h-4" /> Download
+          </button>
+          <button
+            className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(doc.id, doc.name);
+              onClose();
+            }}
+          >
+            <Trash2 className="w-4 h-4" /> Delete
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function AdminDocuments() {
   const location = useLocation();
@@ -545,29 +608,17 @@ setCategories(data);
                     </td>
                     <td className="p-6">
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleDownload(doc.id, doc.name)}
-                        >
-                          <Download className="w-4 h-4 text-gray-600" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => {
-                            setDeleteTarget({ id: doc.id, name: doc.name });
+                        <DocumentActionMenu
+                          doc={doc}
+                          isOpen={openMenuDocId === doc.id}
+                          onToggle={() => setOpenMenuDocId(current => current === doc.id ? null : doc.id)}
+                          onClose={() => setOpenMenuDocId(null)}
+                          onDownload={handleDownload}
+                          onDelete={(id, name) => {
+                            setDeleteTarget({ id, name });
                             setDeleteDialogOpen(true);
                           }}
-                          disabled={deletingId === doc.id}
-                        >
-                          <Trash2 className="w-4 h-4 text-red-600" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="w-4 h-4 text-gray-600" />
-                        </Button>
+                        />
                       </div>
                     </td>
                   </tr>
