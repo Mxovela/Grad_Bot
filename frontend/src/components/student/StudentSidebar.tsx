@@ -1,6 +1,8 @@
 import { MessageSquare, User, BookOpen, Calendar, FileText, Home } from 'lucide-react';
 import { Link, useLocation } from 'react-router';
+import { useTheme } from '../../context/ThemeContext';
 import logo from '../../assets/logo.png';
+import logo1 from '../../assets/logo1.png';
 import { useStudentNotifications } from '../../context/StudentNotificationContext';
 
 const navItems = [
@@ -14,6 +16,7 @@ const navItems = [
 
 export function StudentSidebar() {
   const location = useLocation();
+  const { isDark } = useTheme();
   const { hasNewMilestone, hasNewDocument, hasNewResource, markAsViewed } = useStudentNotifications();
 
   const handleLinkClick = (path: string) => {
@@ -40,9 +43,9 @@ export function StudentSidebar() {
       <div className="p-6">
         <div className="flex items-center gap-2 mb-8">
           <img 
-            src={logo} 
+            src={isDark ? logo1 : logo} 
             alt="Datacentrix Logo" 
-            className="h-8 w-auto dark:drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]"
+            className="h-8 w-auto"
           />
         </div>
 

@@ -14,6 +14,7 @@ const navItems = [
 
 export function AdminSidebar() {
   const location = useLocation();
+  const { isDark } = useTheme();
 
   return (
     <aside 
@@ -27,9 +28,9 @@ export function AdminSidebar() {
       <div className="p-6">
         <div className="flex items-center gap-2 mb-8">
           <img 
-            src={logo} 
+            src={isDark ? logo1 : logo} 
             alt="Datacentrix Logo" 
-            className="h-8 w-auto dark:drop-shadow-[0_0_5px_rgba(255,255,255,0.8)]"
+            className="h-8 w-auto"
           />
         </div>
 

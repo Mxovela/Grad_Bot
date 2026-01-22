@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useClickOutside } from '../hooks/use-click-outside';
 import { CustomModal } from '../components/ui/custom-modal';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -10,8 +11,7 @@ import { useLoading } from '../components/ui/loading';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Label } from '../components/ui/label';
 import { Checkbox } from '../components/ui/checkbox';
-import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Search, MoreVertical, UserCircle2, AlertCircle, Plus, Archive, RefreshCw } from 'lucide-react';
+import { Search, MoreVertical, UserCircle2, AlertCircle, Plus } from 'lucide-react';
 
 type GraduateUser = {
   id: string | number;
@@ -21,11 +21,71 @@ type GraduateUser = {
   email: string;
   phone: string;
   progress?: string | number | null;
-  archived?: boolean;
 };
 
+function UserActionMenu({ 
+  user, 
+  isOpen, 
+  onToggle, 
+  onClose,
+  onEdit, 
+  onDelete 
+}: {
+  user: GraduateUser;
+  isOpen: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  onEdit: (user: GraduateUser) => void;
+  onDelete: (id: string | number) => void;
+}) {
+  const ref = useClickOutside<HTMLDivElement>(() => onClose(), isOpen);
+
+  return (
+    <div className="relative inline-block" ref={ref}>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        title="More actions"
+        onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+        }}
+      >
+        <MoreVertical className="w-4 h-4 text-gray-600" />
+      </Button>
+      {isOpen && (
+        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-28 rounded-md border bg-white shadow-lg z-50">
+          <button
+            className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
+            type="button"
+            style={{ color: '#000000' }}
+            onClick={(e) => {
+                e.stopPropagation();
+                onEdit(user);
+                onClose();
+            }}
+          >
+            Edit
+          </button>
+          <button
+            className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(user.id);
+              onClose();
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AdminUserManagement() {
-  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<GraduateUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
@@ -70,7 +130,6 @@ export function AdminUserManagement() {
           email: it?.email ?? '',
           phone: it?.phone ?? it?.phone_number ?? '',
           progress: it?.progress ?? null,
-          archived: it?.archived ?? false,
         }));
         setUsers(mapped);
         setSelectedUserIds([]);
@@ -123,25 +182,6 @@ export function AdminUserManagement() {
       await fetchUsers();
     } catch (err: any) {
       setUsersError(err?.message ?? 'Failed to delete user');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleArchive = async (id: string | number, archived: boolean) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`http://127.0.0.1:8000/graduates/${id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ archived }),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      await fetchUsers();
-    } catch (err: any) {
-      setUsersError(err?.message ?? 'Failed to update user');
     } finally {
       setLoading(false);
     }
@@ -287,13 +327,6 @@ export function AdminUserManagement() {
   return (
     <div className="pt-8 space-y-8">
       <Card className="p-6 border-gray-200">
-        <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'active' | 'archived')} className="w-full mb-6">
-          <TabsList className="grid w-[400px] grid-cols-2">
-            <TabsTrigger value="active">Active Graduates</TabsTrigger>
-            <TabsTrigger value="archived">Archived Graduates</TabsTrigger>
-          </TabsList>
-        </Tabs>
-
         <div className="flex items-center gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -474,61 +507,18 @@ export function AdminUserManagement() {
                     </td>
                     <td className="p-6">
                       <div className="flex items-center gap-2">
-                        <div className="relative inline-block">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            title="More actions"
-                            onClick={() =>
-                              setOpenMenuUserId((current) =>
-                                current === user.id ? null : user.id
-                              )
-                            }
-                          >
-                            <MoreVertical className="w-4 h-4 text-gray-600" />
-                          </Button>
-                          {openMenuUserId === user.id && (
-                            <div
-                              className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-28 rounded-md border bg-white shadow-lg z-50"
-                            >
-                              <button
-                                className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
-                                type="button"
-                                style={{ color: '#000000' }}
-                                onClick={() => openEditModal(user)}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
-                                type="button"
-                                style={{ color: '#000000' }}
-                                onClick={() => handleArchive(user.id, !user.archived)}
-                              >
-                                {user.archived ? (
-                                  <span className="flex items-center gap-2">
-                                    <RefreshCw className="w-4 h-4" /> Unarchive
-                                  </span>
-                                ) : (
-                                  <span className="flex items-center gap-2">
-                                    <Archive className="w-4 h-4" /> Archive
-                                  </span>
-                                )}
-                              </button>
-                              <button
-                                className="block w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
-                                type="button"
-                                onClick={() => {
-                                  setOpenMenuUserId(null);
-                                  setConfirmUserId(user.id);
-                                }}
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        <UserActionMenu
+                          user={user}
+                          isOpen={openMenuUserId === user.id}
+                          onToggle={() =>
+                            setOpenMenuUserId((current) =>
+                              current === user.id ? null : user.id
+                            )
+                          }
+                          onClose={() => setOpenMenuUserId(null)}
+                          onEdit={openEditModal}
+                          onDelete={(id) => setConfirmUserId(id)}
+                        />
                       </div>
                     </td>
                   </tr>
