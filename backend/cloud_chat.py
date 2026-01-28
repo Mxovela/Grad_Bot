@@ -43,7 +43,7 @@ TEST = True
  
 ## Train context
 #/ Locally store and process the file to extract text
-def download_from_supabase(file_path: str) -> str:
+def download_from_supabase(file_path: str) -> list[dict]:
     """
     Downloads a file from Supabase Storage and returns a local file path.
     """
@@ -60,26 +60,47 @@ def download_from_supabase(file_path: str) -> str:
  
     return local_path
  
-def extract_text(file_path: str) -> str:
+def extract_pages(file_path: str) -> str:
  
     local_path = download_from_supabase(file_path)
  
     if local_path.endswith(".pdf"):
         reader = PdfReader(local_path)
-        return "\n".join(page.extract_text() or "" for page in reader.pages)
+        pages = []
+
+        for i, page in enumerate(reader.pages):
+            text = page.extract_text() or ""
+            if text.strip():
+                pages.append({
+                    "page": i + 1,
+                    "text": text
+                })
+
+        return pages
  
     if local_path.endswith(".docx"):
         doc = Document(local_path)
-        return "\n".join(p.text for p in doc.paragraphs)
- 
+        return [{
+            "page": 1,
+            "text": "\n".join(p.text for p in doc.paragraphs)
+        }]
+
     if local_path.endswith(".pptx"):
         prs = Presentation(local_path)
-        text = []
-        for slide in prs.slides:
+        pages = []
+
+        for i, slide in enumerate(prs.slides):
+            text = []
             for shape in slide.shapes:
                 if hasattr(shape, "text"):
                     text.append(shape.text)
-        return "\n".join(text)
+
+            pages.append({
+                "page": i + 1,
+                "text": "\n".join(text)
+            })
+
+        return pages
  
     raise ValueError("Unsupported file type")
  
@@ -91,45 +112,52 @@ def embed_text(text: str) -> list[float]:
     )
     return response.data[0].embedding
  
-def chunk_text(text, chunk_size=CHUNCK_SIZE, overlap=CHUNCK_OVERLAP):
-    tokens = tokenizer.encode(text)
+def chunk_pages(pages, chunk_size=CHUNCK_SIZE, overlap=CHUNCK_OVERLAP):
     chunks = []
- 
-    i = 0
-    while i < len(tokens):
-        chunk = tokens[i:i + chunk_size]
-        chunks.append(tokenizer.decode(chunk))
-        i += chunk_size - overlap
- 
+
+    for page in pages:
+
+        tokens = tokenizer.encode(page["text"])
+        if len(tokens) < 10:
+            continue
+
+        i = 0
+        while i < len(tokens):
+            chunk_tokens = tokens[i:i + chunk_size]
+            chunks.append({
+                "text": tokenizer.decode(chunk_tokens),
+                "page": page["page"]
+            })
+            i += chunk_size - overlap
+
     return chunks
  
 def index_document(document_id: str, file_path: str):
 
-    print("embedding doc: ",file_path)
+    pages = extract_pages(file_path)
+    chunks = chunk_pages(pages)
 
-    text = extract_text(file_path)
-    chunks = chunk_text(text)
- 
-    # 1. Delete old chunks
     supabase.table("document_chunks") \
         .delete() \
         .eq("document_id", document_id) \
         .execute()
- 
-    # 2. Insert fresh chunks
+
     rows = []
     for i, chunk in enumerate(chunks):
         rows.append({
             "document_id": document_id,
             "chunk_index": i,
-            "content": chunk,
-            "embedding": embed_text(chunk),
+            "content": chunk["text"],
+            "page": chunk["page"],
+            "embedding": embed_text(chunk["text"]),
         })
- 
-    r = supabase.table("document_chunks").insert(rows).execute()
+
+    supabase.table("document_chunks").insert(rows).execute()
  
 #/ Batch embedding
 def embed_all():
+    start_time = datetime.now().strftime('%I:%M:%S %p')
+    print("Starting to embed all documents: ",start_time)
     files = (
         supabase.table("documents")
         .select("*")
@@ -142,6 +170,9 @@ def embed_all():
         file_id = file["id"]
  
         index_document(file_id, file_path)
+
+    end_time = datetime.now().strftime('%I:%M:%S %p')
+    print("Finished embedding all documents: ",end_time)
    
     return True
  
@@ -500,7 +531,7 @@ def chat(user_id, question):
 def test():
     #embed_all()
     user_id = "73205ea6-2afe-4407-a35e-6ea6f7260333"
-    question = "do we learn instana"
+    question = "What is instana?"
     convo  = chat(user_id, question)
     q = convo["question"]
     a = convo["answer"]
