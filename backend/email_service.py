@@ -24,8 +24,17 @@ def get_all_graduate_emails():
         # Note: 'User' table usually has 'email' and 'role'
         # Adjust table name if it's strictly case sensitive "User" or "users"
         # Based on userdatabase.py: supabase.table("User")
-        res = supabase.table("User").select("email").eq("role", "graduate").execute()
-        return [row['email'] for row in res.data if row.get('email')]
+        emails = []
+
+        grads = supabase.table("graduates").select("id").execute().data
+
+        for grad in grads:
+            id = grad["id"]
+            res = supabase.table("User").select("email").eq("id",id).single().execute().data
+            if res: emails.append(res["email"])
+
+        # [row['email'] for row in res.data if row.get('email')]
+        return emails
     except Exception as e:
         print(f"Error fetching graduate emails: {e}")
         return []
@@ -43,6 +52,7 @@ def send_email(to_emails: list[str], subject: str, body: str):
     """
     Send an email to a list of recipients.
     """
+    print("Email config: host, user, password, from \n",SMTP_HOST, SMTP_USER, SMTP_PASSWORD, SMTP_FROM )
     if not (SMTP_HOST and SMTP_USER and SMTP_PASSWORD and SMTP_FROM):
         print("⚠️ Email configuration missing. Skipping email send.")
         print(f"Would have sent email to {len(to_emails)} recipients: {subject}")
@@ -54,7 +64,8 @@ def send_email(to_emails: list[str], subject: str, body: str):
 
     try:
         # Convert list to unique set to avoid duplicates
-        unique_emails = list(set(to_emails))
+        # unique_emails = list(set(to_emails))
+        unique_emails = to_emails
         
         # Connect to SMTP server
         server = smtplib.SMTP(SMTP_HOST, int(SMTP_PORT))
@@ -77,6 +88,8 @@ def send_email(to_emails: list[str], subject: str, body: str):
             msg['To'] = email_addr
             msg['Subject'] = subject
 
+            print("sending to: ", email_addr)
+
             msg.attach(MIMEText(body, 'html')) # Support HTML for nicer notifications
 
             server.sendmail(SMTP_FROM, email_addr, msg.as_string())
@@ -86,3 +99,6 @@ def send_email(to_emails: list[str], subject: str, body: str):
 
     except Exception as e:
         print(f"❌ Error sending email: {e}")
+        
+#send_email(["mxovelamxo@outlook.com","mo1motala@gmail.com"], "Testing function send", "test4")
+#print(get_all_graduate_emails())
