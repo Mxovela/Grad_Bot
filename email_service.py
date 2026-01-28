@@ -1,6 +1,6 @@
+
 import os
 import smtplib
-from email.message import EmailMessage
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
@@ -9,7 +9,7 @@ from supabase import create_client, Client
 load_dotenv()
 
 SMTP_HOST = os.getenv("SMTP_HOST")
-SMTP_PORT = os.getenv("SMTP_PORT", 587)
+SMTP_PORT = os.getenv("SMTP_PORT", "587")
 SMTP_USER = os.getenv("SMTP_USER")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 SMTP_FROM = os.getenv("SMTP_FROM")
@@ -17,29 +17,6 @@ SMTP_FROM = os.getenv("SMTP_FROM")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-
-
-def send_otp_email(to_email: str, otp: str):
-    msg = EmailMessage()
-    msg["Subject"] = "Your verification code"
-    msg["From"] = SMTP_FROM
-    msg["To"] = to_email
-    msg.set_content(
-        f"""
-Your verification code is:
-
-{otp}
-
-This code expires in 10 minutes.
-If you did not request this, ignore this email.
-"""
-    )
-
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-        server.starttls()
-        server.login(SMTP_USER, SMTP_PASSWORD)
-        server.send_message(msg)
 
 def get_all_graduate_emails():
     """Fetch emails of all users with role 'graduate'"""
