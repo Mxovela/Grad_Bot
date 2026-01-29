@@ -243,7 +243,7 @@ def create_milestone_with_tasks(title: str, week_label: str, tasks: list[str], g
                 <h2>New Milestone Assigned</h2>
                 <p>A new milestone <strong>{title}</strong> ({week_label}) has been assigned to you.</p>
                 <p>Tasks included: {len(tasks) if tasks else 0}</p>
-                <p>Log in to view it: <a href="http://localhost:5173/student/timeline">View Timeline</a></p>
+                <p>Log in to view it: <a href="https://resilient-pithivier-201bbe.netlify.app/">View Timeline</a></p>
                 """
                 
                 if grad_id:
