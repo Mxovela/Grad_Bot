@@ -22,7 +22,7 @@ def user_exists(email: str) -> bool:
     user = (
         supabase.table("User")
         .select("*")
-        .eq("email", email)
+        .eq("email", email.lower())
         .execute()
     ).data
     return bool(user)
@@ -32,7 +32,7 @@ def get_user(email: str, password: str):
     rows = (
         supabase.table("User")
         .select("*")
-        .eq("email", email)
+        .eq("email", email.lower())
         .eq("hashed_pass", hashed_pass)
         .execute()
     ).data
