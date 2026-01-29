@@ -10,6 +10,7 @@ import {
   ThumbsDown,
   Sparkles
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 
 // Add loading type
 type MessageType = 'user' | 'bot' | 'loading';
@@ -38,9 +39,20 @@ interface Message {
 
 const formatTime = (dateInput?: string | Date) => {
   try {
-    const date = dateInput ? new Date(dateInput) : new Date();
+    if (!dateInput) {
+      return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    }
+
+    if (typeof dateInput === 'string') {
+      const timeMatch = dateInput.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)$/i);
+      if (timeMatch) {
+        return `${timeMatch[1]}:${timeMatch[2]} ${timeMatch[3].toUpperCase()}`;
+      }
+    }
+
+    const date = new Date(dateInput);
     if (isNaN(date.getTime())) return String(dateInput);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
   } catch (error) {
     return String(dateInput || "");
   }
@@ -350,8 +362,22 @@ export function StudentChat() {
                           <span className="dot"></span>
                           <span className="dot"></span>
                         </div>
+                      ) : message.type === 'bot' ? (
+                        <div className="text-sm
+    max-w-none
+
+    [&>p]:mb-3
+    [&>ul]:mb-3
+    [&>ol]:mb-3
+    [&>ul>li]:mb-1
+    [&>ol>li]:mb-1
+    [&>p:last-child]:mb-0 ">
+                          <ReactMarkdown>
+                            {message.content}
+                          </ReactMarkdown>
+                        </div>
                       ) : (
-                        <p className="text-sm">{message.content}</p>
+                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                       )}
                     </div>
 
@@ -374,22 +400,7 @@ export function StudentChat() {
                         <span className="text-xs text-gray-500">
                           {message.timestamp}
                         </span>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                          >
-                            <ThumbsUp className="w-3 h-3 text-gray-400 hover:text-green-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                          >
-                            <ThumbsDown className="w-3 h-3 text-gray-400 hover:text-red-600" />
-                          </Button>
-                        </div>
+                     
                       </div>
                     )}
 
@@ -459,7 +470,7 @@ export function StudentChat() {
 
           {/* Sources side panel */}
           {isSourcesPanelOpen && activeSources && (
-            <Card className="w-80 flex-shrink-0 border-gray-200 flex flex-col overflow-hidden h-[calc(100vh-8rem)] sticky top-8">
+            <Card className="w-80 flex-shrink-0 border-gray-200 flex flex-col overflow-hidden h-[calc(100vh-8rem)] sticky top-8 animate-in slide-in-from-right-10 fade-in duration-300">
             <div className="border-b border-gray-200 px-4 py-3 flex items-center justify-between">
                 <h2 className="text-sm font-semibold">Sources</h2>
                 <Button

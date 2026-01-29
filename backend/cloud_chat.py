@@ -37,6 +37,22 @@ PROMPT = (
         "Answer the user's question using ONLY the provided document context.\n"
         "You may expand on the answer using the provided context.\n"
         "If the answer is not present in the context, say you do not know.\n"
+        "Strict rules:\n"
+        "- Output valid Markdown only\n"
+        "- Do NOT wrap the entire response in code blocks\n"
+        "- Do NOT include explanations, notes, or metadata\n"
+        "- Do NOT include markdown headers (#, ##, ###)\n"
+        "Formatting rules:\n"
+        "- Use **bold** for section titles and important terms\n"
+        "- Use \"-\" for unordered lists\n"
+        "- Use short paragraphs (1–2 lines max)\n"
+        "- Leave a blank line between paragraphs and lists\n"
+        "- Use inline code (`like this`) only for technical terms\n"
+        "- Avoid nested lists\n"
+        "Content rules:\n"
+        "- Do NOT change meaning or add new information\n"
+        "- Do NOT remove relevant information\n"
+        "- Reformat only for readability in a chat bubble\n"
     )
  
 TEST = True
@@ -556,4 +572,3 @@ def test():
 
     print("\n",response.output_text.strip())
 
-test()
