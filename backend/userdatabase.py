@@ -94,6 +94,35 @@ def get_user_id(id):
         user["last_name"] = profile["last_name"]
         user["role"] = profile["role"]
         user["phone"] = contact["phone"]
+        user["avatar_url"] = profile.get("avatar_url")
+        user["emp_no"] = profile.get("emp_no")
+        user["department"] = profile.get("department")
+        user["branch"] = profile.get("branch")
+
+        if user["role"].lower() == "graduate":
+            grad_res = (
+                supabase.table("graduates")
+                .select("*")
+                .eq("id", user["id"])
+                .execute()
+            ).data
+            if grad_res:
+                grad = grad_res[0]
+                user["start_date"] = grad.get("start_date")
+                user["bio"] = grad.get("bio")
+                user["linkedin_link"] = grad.get("linkedin_link")
+                user["github_link"] = grad.get("github_link")
+                user["progress"] = grad.get("progress")
+        else:
+            admin_res = (
+                supabase.table("admins")
+                .select("*")
+                .eq("id", user["id"])
+                .execute()
+            ).data
+            if admin_res:
+                admin = admin_res[0]
+                user["position"] = admin.get("position")
     
         return user
     except Exception as e:
@@ -103,67 +132,54 @@ def get_user_id(id):
 def update_user(user):
     user_id = user["id"]
  
-    user_db = (
-        supabase.table("User")
-        .update({
-            "email": user["email"],
-        })
-        .eq("id", user_id)
-        .execute()
-    ).data
- 
-    if not user_db:
-        raise ValueError("User not found")
+    user_updates = {}
+    if user.get("email") is not None:
+        user_updates["email"] = user["email"]
 
-    contact_db = (
-        supabase.table("contact")
-        .update({
-            "phone": user["phone"]
-        })
-        .eq("id", user_id)
-        .execute()
-    ).data
+    if user_updates:
+        user_db = (
+            supabase.table("User")
+            .update(user_updates)
+            .eq("id", user_id)
+            .execute()
+        ).data
+        
+        if not user_db:
+             pass # Or raise ValueError if critical
+
+    contact_updates = {}
+    if user.get("phone") is not None:
+        contact_updates["phone"] = user["phone"]
+
+    if contact_updates:
+        supabase.table("contact").update(contact_updates).eq("id", user_id).execute()
  
-    profile_db = (
-        supabase.table("profile")
-        .update({
-            "avatar_url": user["avatar_url"],
-            "first_name": user["first_name"],
-            "last_name": user["last_name"],
-            "branch": user["branch"],
-            "emp_no": user["emp_no"],
-            "department": user["department"],
-            "role": user["role"]
-        })
-        .eq("id", user_id)
-        .execute()
-    ).data
+    profile_updates = {}
+    for field in ["avatar_url", "first_name", "last_name", "branch", "emp_no", "department", "role"]:
+        if user.get(field) is not None:
+            profile_updates[field] = user[field]
+
+    if profile_updates:
+        supabase.table("profile").update(profile_updates).eq("id", user_id).execute()
 
     if user["role"].lower() == "graduate":
- 
-        grad_db = (
-            supabase.table("graduates")
-            .update({
-                "start_date": user["start_date"],
-                "bio": user["bio"],
-                "linkedin_link": user["linkedin_link"],
-                "github_link": user["github_link"],
-            })
-            .eq("id", user_id)
-            .execute()
-        ).data
+        grad_updates = {}
+        for field in ["start_date", "bio", "linkedin_link", "github_link"]:
+             if user.get(field) is not None:
+                 grad_updates[field] = user[field]
+        
+        if grad_updates:
+            supabase.table("graduates").update(grad_updates).eq("id", user_id).execute()
  
     else:
-        admin_db = (
-            supabase.table("admins")
-            .update({
-                "position": user["position"],
-            })
-            .eq("id", user_id)
-            .execute()
-        ).data
+        admin_updates = {}
+        if user.get("position") is not None:
+            admin_updates["position"] = user["position"]
+            
+        if admin_updates:
+            supabase.table("admins").update(admin_updates).eq("id", user_id).execute()
  
-    return user_id
+    return get_user_id(user_id)
 
 
 def update_graduate_basic(user_id: str, data: dict):
@@ -204,19 +220,21 @@ def update_graduate_basic(user_id: str, data: dict):
 
 def get_all_graduates():
     try:
-        # 1. Fetch base graduate list
-        graduates_rows = supabase.table("graduates").select("*").execute().data
-        if not graduates_rows:
+        # 1. Fetch ALL profiles (users)
+        profiles_rows = supabase.table("profile").select("*").execute().data
+        if not profiles_rows:
             return []
             
-        grad_ids = [g['id'] for g in graduates_rows]
+        all_ids = [p['id'] for p in profiles_rows]
 
         # 2. Bulk fetch related data
-        # Fetching in chunks if necessary, but assuming < 1000 users for now
-        users = supabase.table("User").select("id, email").in_("id", grad_ids).execute().data
-        profiles = supabase.table("profile").select("id, first_name, last_name, role").in_("id", grad_ids).execute().data
-        contacts = supabase.table("contact").select("id, phone").in_("id", grad_ids).execute().data
+        users = supabase.table("User").select("id, email").in_("id", all_ids).execute().data
+        contacts = supabase.table("contact").select("id, phone").in_("id", all_ids).execute().data
         
+        # Fetch graduates specific data
+        graduates_rows = supabase.table("graduates").select("*").in_("id", all_ids).execute().data
+        grad_map = {g['id']: g for g in graduates_rows}
+
         # 3. Progress Calculation (Bulk)
         # Fetch all milestones to determine relevance and admin status
         milestones = supabase.table("milestones").select("id, status, graduate_id").execute().data
@@ -227,11 +245,11 @@ def get_all_graduates():
         all_tasks = supabase.table("tasks").select("id, milestone_id").execute().data
         
         # Fetch user progress for these graduates
-        user_progress = supabase.table("task_progress").select("graduate_id, task_id").eq("completed", True).in_("graduate_id", grad_ids).execute().data
+        user_progress = supabase.table("task_progress").select("graduate_id, task_id").eq("completed", True).in_("graduate_id", all_ids).execute().data
         
         # Build Lookups
         user_map = {u['id']: u for u in users}
-        profile_map = {p['id']: p for p in profiles}
+        # profile_map is profiles_rows
         contact_map = {c['id']: c for c in contacts}
         
         # Map graduate_id -> set of completed task_ids (user checked)
@@ -244,42 +262,47 @@ def get_all_graduates():
 
         graduates = []
 
-        for grad_row in graduates_rows:
+        for p in profiles_rows:
             try:
-                gid = grad_row["id"]
+                gid = p["id"]
                 
                 # Join Data
                 u = user_map.get(gid, {})
-                p = profile_map.get(gid, {})
                 c = contact_map.get(gid, {})
+                grad_row = grad_map.get(gid, {})
                 
-                # Calculate Progress
-                # Filter relevant milestones for this grad
-                relevant_milestones = [
-                    m for m in milestones 
-                    if m.get('graduate_id') is None or str(m.get('graduate_id')) == str(gid)
-                ]
-                relevant_m_ids = {m['id'] for m in relevant_milestones}
+                role = p.get("role", "Graduate")
                 
-                relevant_tasks = [t for t in all_tasks if t['milestone_id'] in relevant_m_ids]
-                total_relevant = len(relevant_tasks)
+                progress = None
                 
-                completed_count = 0
-                user_checked = grad_completed_tasks.get(gid, set())
-                
-                for t in relevant_tasks:
-                    mid = t['milestone_id']
-                    # Admin completed OR User completed
-                    if mid in admin_completed_milestone_ids or t['id'] in user_checked:
-                        completed_count += 1
-                        
-                progress = int((completed_count / total_relevant * 100)) if total_relevant > 0 else 0
+                if role == 'Graduate':
+                    # Calculate Progress
+                    # Filter relevant milestones for this grad
+                    relevant_milestones = [
+                        m for m in milestones 
+                        if m.get('graduate_id') is None or str(m.get('graduate_id')) == str(gid)
+                    ]
+                    relevant_m_ids = {m['id'] for m in relevant_milestones}
+                    
+                    relevant_tasks = [t for t in all_tasks if t['milestone_id'] in relevant_m_ids]
+                    total_relevant = len(relevant_tasks)
+                    
+                    completed_count = 0
+                    user_checked = grad_completed_tasks.get(gid, set())
+                    
+                    for t in relevant_tasks:
+                        mid = t['milestone_id']
+                        # Admin completed OR User completed
+                        if mid in admin_completed_milestone_ids or t['id'] in user_checked:
+                            completed_count += 1
+                            
+                    progress = int((completed_count / total_relevant * 100)) if total_relevant > 0 else 0
 
                 grad = {
                     "id": gid,
                     "first_name": p.get("first_name", ""),
                     "last_name": p.get("last_name", ""),
-                    "role": p.get("role", "Graduate"),
+                    "role": role,
                     "email": u.get("email", ""),
                     "phone": c.get("phone", ""),
                     "progress": progress,
@@ -287,7 +310,7 @@ def get_all_graduates():
                 }
                 graduates.append(grad)
             except Exception as inner_e:
-                print(f"Skipping graduate {grad_row.get('id')} due to error: {inner_e}")
+                print(f"Skipping user {p.get('id')} due to error: {inner_e}")
                 continue
 
         return graduates
