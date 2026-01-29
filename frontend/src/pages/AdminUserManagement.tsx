@@ -5,13 +5,20 @@ import { CustomModal } from '../components/ui/custom-modal';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 import { Badge } from '../components/ui/badge';
 import { Skeleton } from '../components/ui/skeleton';
 import { useLoading } from '../components/ui/loading';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Label } from '../components/ui/label';
 import { Checkbox } from '../components/ui/checkbox';
-import { Search, MoreVertical, UserCircle2, AlertCircle, Plus } from 'lucide-react';
+import { Search, MoreVertical, UserCircle2, AlertCircle, Plus, Filter } from 'lucide-react';
 import { API_BASE_URL } from '../utils/config';
 
 type GraduateUser = {
@@ -88,6 +95,8 @@ function UserActionMenu({
 
 export function AdminUserManagement() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterRole, setFilterRole] = useState('all');
   const [users, setUsers] = useState<GraduateUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [usersError, setUsersError] = useState<string | null>(null);
@@ -101,7 +110,6 @@ export function AdminUserManagement() {
     role: string;
     email: string;
     phone: string;
-    password: string;
   } | null>(null);
   const [editingUser, setEditingUser] = useState<GraduateUser | null>(null);
   const [editForm, setEditForm] = useState<{
@@ -165,12 +173,15 @@ export function AdminUserManagement() {
   const filteredUsers = users.filter((user) => {
     const query = searchQuery.toLowerCase();
     const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
-    return (
+    const matchesSearch =
       fullName.includes(query) ||
       user.role.toLowerCase().includes(query) ||
       user.email.toLowerCase().includes(query) ||
-      user.phone.toLowerCase().includes(query)
-    );
+      user.phone.toLowerCase().includes(query);
+    
+    const matchesRole = filterRole === 'all' || user.role === filterRole;
+    
+    return matchesSearch && matchesRole;
   });
 
 
@@ -249,7 +260,7 @@ export function AdminUserManagement() {
         },
         body: JSON.stringify({
           email: createForm.email,
-          password: createForm.password,
+          password: Math.random().toString(36).slice(-8),
           first_name: createForm.firstName,
           last_name: createForm.lastName,
           role: createForm.role,
@@ -315,7 +326,20 @@ export function AdminUserManagement() {
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      await fetchUsers();
+      
+      const data = await res.json();
+      const updatedUser: GraduateUser = {
+        id: data.id,
+        firstName: data.first_name,
+        lastName: data.last_name,
+        role: data.role,
+        email: data.email,
+        phone: data.phone,
+        progress: data.progress ?? null,
+      };
+      
+      setUsers(prev => prev.map(u => String(u.id) === String(updatedUser.id) ? updatedUser : u));
+      
       setEditingUser(null);
       setEditForm(null);
     } catch (err: any) {
@@ -341,6 +365,14 @@ export function AdminUserManagement() {
             />
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              className="rounded-xl"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              Filter
+            </Button>
             <div className="inline-flex items-center gap-2 rounded-xl px-3 py-2 bg-primary text-primary-foreground">
               <UserCircle2 className="w-4 h-4" />
               <span className="text-sm font-medium">
@@ -356,7 +388,6 @@ export function AdminUserManagement() {
                   role: 'Graduate',
                   email: '',
                   phone: '',
-                  password: '',
                 })
               }
             >
@@ -373,6 +404,33 @@ export function AdminUserManagement() {
             </Button>
           </div>
         </div>
+        {showFilters && (
+          <div className="flex items-center gap-4 border-t pt-4 mt-4">
+            <div className="flex-1">
+              <Label className="text-sm mb-2 block">Filter by Role</Label>
+              <Select value={filterRole} onValueChange={setFilterRole}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="All Roles" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="Graduate">Graduate</SelectItem>
+                  <SelectItem value="Admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              variant="outline"
+              className="rounded-xl mt-6"
+              onClick={() => {
+                setFilterRole('all');
+                setSearchQuery('');
+              }}
+            >
+              Clear Filters
+            </Button>
+          </div>
+        )}
       </Card>
       
       {usersError && (
@@ -537,7 +595,6 @@ export function AdminUserManagement() {
         title="Add user"
         overlayOpacity={0}
         overlayBlur={0}
-        zIndex={2147483601}
         footer={
           <>
             <Button
@@ -584,17 +641,22 @@ export function AdminUserManagement() {
             </div>
             <div className="space-y-1">
               <Label htmlFor="newRole">Role</Label>
-              <Input
-                id="newRole"
+              <Select
                 value={createForm.role}
-                onChange={(e) =>
+                onValueChange={(val) =>
                   setCreateForm((prev) =>
-                    prev
-                      ? { ...prev, role: e.target.value }
-                      : prev
+                    prev ? { ...prev, role: val } : prev
                   )
                 }
-              />
+              >
+                <SelectTrigger id="newRole">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Graduate">Graduate</SelectItem>
+                  <SelectItem value="Admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <Label htmlFor="newEmail">Email</Label>
@@ -625,21 +687,6 @@ export function AdminUserManagement() {
                 }
               />
             </div>
-            <div className="space-y-1">
-              <Label htmlFor="newPassword">Password</Label>
-              <Input
-                id="newPassword"
-                type="password"
-                value={createForm.password}
-                onChange={(e) =>
-                  setCreateForm((prev) =>
-                    prev
-                      ? { ...prev, password: e.target.value }
-                      : prev
-                  )
-                }
-              />
-            </div>
           </div>
         )}
       </CustomModal>
@@ -652,7 +699,6 @@ export function AdminUserManagement() {
         title="Edit user"
         overlayOpacity={0}
         overlayBlur={0}
-        zIndex={2147483601}
         footer={
           <>
             <Button
@@ -702,17 +748,22 @@ export function AdminUserManagement() {
             </div>
             <div className="space-y-1">
               <Label htmlFor="role">Role</Label>
-              <Input
-                id="role"
+              <Select
                 value={editForm.role}
-                onChange={(e) =>
+                onValueChange={(val) =>
                   setEditForm((prev) =>
-                    prev
-                      ? { ...prev, role: e.target.value }
-                      : prev
+                    prev ? { ...prev, role: val } : prev
                   )
                 }
-              />
+              >
+                <SelectTrigger id="role">
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Graduate">Graduate</SelectItem>
+                  <SelectItem value="Admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1">
               <Label htmlFor="email">Email</Label>
