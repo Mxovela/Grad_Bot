@@ -6,7 +6,6 @@ import os
 from dotenv import load_dotenv
 from supabase import create_client, Client
 from datetime import datetime, timedelta, timezone
-from dependencies import get_current_user
 
 load_dotenv()
 
