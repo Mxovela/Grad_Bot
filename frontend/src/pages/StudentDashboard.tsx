@@ -30,6 +30,7 @@ export function StudentDashboard() {
   });
   const [totalQuestions, setTotalQuestions] = useState(0);
   const [totalViews, setTotalViews] = useState(0);
+  const [viewsThisWeek, setViewsThisWeek] = useState(0);
   const [statsLoading, setStatsLoading] = useState(true);
   const { setLoading } = useLoading();
 
@@ -109,7 +110,26 @@ export function StudentDashboard() {
               // ignore fetch errors
             }
 
-
+            // Fetch total views
+            try {
+              const viewsRes = await fetch(
+                `${API_BASE_URL}/documents/user/${data.id}/view-count`,
+                {
+                  method: 'GET',
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                  },
+                }
+              );
+              if (viewsRes.ok) {
+                const viewsData = await viewsRes.json();
+                setTotalViews(viewsData.count || 0);
+                setViewsThisWeek(viewsData.this_week || 0);
+              }
+            } catch (error) {
+              console.error('Error fetching view count:', error);
+            }
 
           // Fetch top 3 active/upcoming milestones
           try {
@@ -263,8 +283,8 @@ export function StudentDashboard() {
               <MessageSquare className="w-6 h-6 text-white" />
             </div>
           </div>
-          <p className="text-gray-600 text-sm mb-1">Questions Asked</p>
-          <p className="text-gray-900 mb-2">
+          <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">Questions Asked</p>
+          <p className="text-gray-900 dark:text-gray-100 mb-2">
             {statsLoading ? (
               <Loader2 className="w-4 h-4 text-gray-400 gb-spinner" />
             ) : (
@@ -286,19 +306,19 @@ export function StudentDashboard() {
               <BookOpen className="w-6 h-6 text-white" />
             </div>
           </div>
-          <p className="text-gray-600 text-sm mb-1">Resources Viewed</p>
-          <p className="text-gray-900 mb-2">
+          <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">Resources Viewed</p>
+          <p className="text-gray-900 dark:text-gray-100 mb-2">
             {statsLoading ? (
               <Loader2 className="w-4 h-4 text-gray-400 gb-spinner" />
             ) : (
-              0
+              totalViews
             )}
           </p>
           <p className="text-sm text-green-600">
             {statsLoading ? (
               <Loader2 className="w-3 h-3 text-green-400 gb-spinner" />
             ) : (
-              '+3 this week'
+              `+${viewsThisWeek} this week`
             )}
           </p>
         </Card>
@@ -309,8 +329,8 @@ export function StudentDashboard() {
               <TrendingUp className="w-6 h-6 text-white" />
             </div>
           </div>
-          <p className="text-gray-600 text-sm mb-1">Programme Progress</p>
-          <p className="text-gray-900 mb-2">
+          <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">Programme Progress</p>
+          <p className="text-gray-900 dark:text-gray-100 mb-2">
             {statsLoading ? (
               <Loader2 className="w-4 h-4 text-gray-400 gb-spinner" />
             ) : (
@@ -332,8 +352,8 @@ export function StudentDashboard() {
               <CheckCircle2 className="w-6 h-6 text-white" />
             </div>
           </div>
-          <p className="text-gray-600 text-sm mb-1">Tasks Completed</p>
-          <p className="text-gray-900 mb-2">
+          <p className="text-gray-600 dark:text-gray-400 text-sm mb-1">Tasks Completed</p>
+          <p className="text-gray-900 dark:text-gray-100 mb-2">
             {statsLoading ? (
               <Loader2 className="w-4 h-4 text-gray-400 gb-spinner" />
             ) : (
@@ -370,8 +390,8 @@ export function StudentDashboard() {
                 <div key={index} className="p-4 rounded-xl border border-gray-100 hover:border-gray-200 transition-colors">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
-                      <p className="text-gray-900 text-sm mb-1">{milestone.title}</p>
-                      <p className="text-gray-500 text-xs flex items-center gap-1">
+                      <p className="text-gray-900 dark:text-gray-100 text-sm mb-1">{milestone.title}</p>
+                      <p className="text-gray-500 dark:text-gray-400 text-xs flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         {milestone.dueDate}
                       </p>
@@ -415,8 +435,8 @@ export function StudentDashboard() {
                   <BookOpen className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-gray-900 text-sm truncate">{resource.file_name}</p>
-                  <p className="text-gray-500 text-xs">{resource.file_extension} • {resource.views} views</p>
+                  <p className="text-gray-900 dark:text-gray-100 text-sm truncate">{resource.file_name}</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">{resource.file_extension} • {resource.views} views</p>
                 </div>
                 <button
                   onClick={(e) => {
