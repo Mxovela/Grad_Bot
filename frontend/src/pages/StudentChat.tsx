@@ -8,7 +8,9 @@ import {
   FileText,
   ThumbsUp,
   ThumbsDown,
-  Sparkles
+  Sparkles,
+  RotateCcw,
+  ArrowDown
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
@@ -81,6 +83,7 @@ export function StudentChat() {
   const [activeSources, setActiveSources] = useState<Source[] | null>(null);
 
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
+  const [isResetting, setIsResetting] = useState(false);
 
   // AUTO-SCROLL WHEN MESSAGES CHANGE (but don't break manual scrolling)
   useEffect(() => {
@@ -304,6 +307,38 @@ export function StudentChat() {
     setInputValue(question);
   };
 
+  const handleResetChat = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const id = JSON.parse(atob(token.split('.')[1])).user_id;
+    
+    setIsResetting(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/chat/reset/${id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const welcomeMessage: Message = {
+          id: Date.now(),
+          type: 'bot',
+          content: "Hello! I'm your Graduate Programme Assistant. How can I help you today?",
+          timestamp: formatTime()
+        };
+        setMessages([welcomeMessage]);
+      } else {
+        console.error("Failed to reset chat");
+      }
+    } catch (error) {
+      console.error("Error resetting chat:", error);
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <div className="pt-8 h-[calc(100vh-8rem)]">
       <div className="flex flex-col h-full max-w-4xl mx-auto">
@@ -439,6 +474,32 @@ export function StudentChat() {
 
             {/* Input area */}
             <div className="border-t border-gray-200 p-6">
+              <div className="flex justify-center mb-2 gap-2">
+                {messages.length > 1 && (
+                  <Button
+                    onClick={handleResetChat}
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-50 h-auto py-1.5 px-3 rounded-full gap-1.5 transition-colors"
+                    disabled={isResetting}
+                  >
+                    <RotateCcw className={`w-3.5 h-3.5 ${isResetting ? 'animate-spin' : ''}`} />
+                    Reset Chat
+                  </Button>
+                )}
+                
+                {!isAtBottom && (
+                  <Button
+                    onClick={scrollToBottom}
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-50 h-auto py-1.5 px-3 rounded-full gap-1.5 transition-colors animate-bounce"
+                  >
+                    <ArrowDown className="w-3.5 h-3.5" />
+                    Scroll to Bottom
+                  </Button>
+                )}
+              </div>
               <div className="flex items-end gap-3">
                 <Input
                   placeholder="Type your question here..."
@@ -456,16 +517,7 @@ export function StudentChat() {
               </div>
             </div>
 
-            {/* Scroll-to-bottom arrow */}
-            {!isAtBottom && (
-              <button
-                type="button"
-                onClick={scrollToBottom}
-                className="absolute right-4 bottom-24 z-10 rounded-full bg-white shadow-md border border-gray-200 p-2 hover:bg-gray-50"
-              >
-                <span className="block text-gray-600 text-xs">↓</span>
-              </button>
-            )}
+
           </Card>
 
           {/* Sources side panel */}
