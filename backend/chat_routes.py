@@ -1,7 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from cloud_chat import chat, ordered_history, get_user_message_count
-
+from cloud_chat import chat, ordered_history, get_user_message_count,chunks_by_id
 
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
@@ -22,6 +21,9 @@ class QuestionResponse(BaseModel):
     question: str
     answer: str
     sources: list[Source]
+
+class SourcesRequest(BaseModel):
+    chunks: list[str]
 
 
 @router.post("/ask")
@@ -55,3 +57,10 @@ async def get_message_count(user_id: str):
         return {"count": count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+@router.post("/get-chat-sources")
+async def get_chat_sources(request: SourcesRequest):
+    try:
+        sources = chunks_by_id(request.chunks)
+        return sources
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching sources: {str(e)}")
